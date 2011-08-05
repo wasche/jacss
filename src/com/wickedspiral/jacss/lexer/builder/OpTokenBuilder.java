@@ -16,7 +16,7 @@ public class OpTokenBuilder implements TokenBuilder
         if ('=' == c)
         {
             state.push(c)
-                 .tokenFinished(Token.OP)
+                 .tokenFinished(Token.EQUALS)
                  .unsetTokenBuilder();
         }
         else if (state.getTokenLength() == 0)
@@ -25,7 +25,7 @@ public class OpTokenBuilder implements TokenBuilder
         }
         else
         {
-            state.tokenFinished(Token.OP)
+            state.tokenFinished(Token.getByCharacter(state.getLastCharacter()))
                  .unsetTokenBuilder()
                  .tokenize(c);
         }

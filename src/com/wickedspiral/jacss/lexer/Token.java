@@ -6,10 +6,89 @@ package com.wickedspiral.jacss.lexer;
  */
 public enum Token
 {
-    OP,
     IDENTIFIER,
     NUMBER,
     STRING,
     COMMENT,
-    WHITESPACE
+    WHITESPACE,
+    OP,
+    HASH,
+    PERCENT,
+    LPAREN,
+    RPAREN,
+    EQUALS,
+    GT,
+    AT,
+    COLON,
+    SEMICOLON,
+    LBRACE,
+    RBRACE,
+    LBRACKET,
+    RBRACKET,
+    PLUS,
+    STAR,
+    PERIOD,
+    COMMA,
+    TILDAE,
+    PIPE,
+    BACKSLASH,
+    DOLLAR,
+    CARROT,
+    BANG
+    ;
+
+    public static Token getByCharacter(char c)
+    {
+        switch (c)
+        {
+            case '#':
+                return HASH;
+            case '%':
+                return PERCENT;
+            case '(':
+                return LPAREN;
+            case ')':
+                return RPAREN;
+            case '=':
+                return EQUALS;
+            case '>':
+                return GT;
+            case '@':
+                return AT;
+            case ':':
+                return COLON;
+            case ';':
+                return SEMICOLON;
+            case '{':
+                return LBRACE;
+            case '}':
+                return RBRACE;
+            case '[':
+                return LBRACKET;
+            case ']':
+                return RBRACKET;
+            case '+':
+                return PLUS;
+            case '*':
+                return STAR;
+            case '.':
+                return PERIOD;
+            case ',':
+                return COMMA;
+            case '~':
+                return TILDAE;
+            case '|':
+                return PIPE;
+            case '\\':
+                return BACKSLASH;
+            case '$':
+                return DOLLAR;
+            case '^':
+                return CARROT;
+            case '!':
+                return BANG;
+            default:
+                return null;
+        }
+    }
 }
