@@ -3,6 +3,8 @@ package com.wickedspiral.jacss.parser;
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenListener;
 
+import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
@@ -60,8 +62,17 @@ public class Parser implements TokenListener
     private Token lastToken;
     private String lastValue;
 
+    private PrintStream out;
+
     public Parser()
     {
+        this(System.out);
+    }
+
+    public Parser(OutputStream outputStream)
+    {
+        out = new PrintStream(outputStream);
+
         ruleBuffer = new LinkedList<String>();
         valueBuffer = new LinkedList<String>();
         rgbBuffer = new LinkedList<String>();
@@ -87,7 +98,7 @@ public class Parser implements TokenListener
 
     private void output(String str)
     {
-        System.out.print(str);
+        out.print(str);
     }
 
     private void dump(String str)
