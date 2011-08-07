@@ -99,6 +99,7 @@ public class Parser implements TokenListener
     private void output(String str)
     {
         out.print(str);
+        out.flush();
     }
 
     private void dump(String str)
@@ -143,7 +144,7 @@ public class Parser implements TokenListener
         }
         else
         {
-            //write(pending);
+            write(pending);
             pending = str;
         }
     }

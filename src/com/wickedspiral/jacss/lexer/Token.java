@@ -1,5 +1,7 @@
 package com.wickedspiral.jacss.lexer;
 
+import org.apache.log4j.Logger;
+
 /**
  * @author wasche
  * @since 2011.08.04
@@ -36,6 +38,8 @@ public enum Token
     CARROT,
     BANG
     ;
+
+    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss.lexer");
 
     public static Token getByCharacter(char c)
     {
@@ -87,7 +91,10 @@ public enum Token
                 return CARROT;
             case '!':
                 return BANG;
+            case ' ':
+                return WHITESPACE;
             default:
+                logger.error("Couldn't find token for character: '" + c + "'");
                 return null;
         }
     }

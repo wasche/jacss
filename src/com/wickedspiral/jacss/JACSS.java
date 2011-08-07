@@ -3,6 +3,9 @@ package com.wickedspiral.jacss;
 import com.wickedspiral.jacss.lexer.Lexer;
 import com.wickedspiral.jacss.lexer.UnrecognizedCharacterException;
 import com.wickedspiral.jacss.parser.Parser;
+import org.apache.log4j.BasicConfigurator;
+import org.apache.log4j.Level;
+import org.apache.log4j.Logger;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -37,28 +40,27 @@ public class JACSS implements Runnable
 
         @Option(name="-r", aliases = {"--regex-from"}, required=false, metaVar="REGEXFROM",
                 usage="Regex to replace with REGEXTO in new file names (default: " + REGEX_FROM + ")")
-        private String regexFrom;
+        private String regexFrom = REGEX_FROM;
 
         @Option(name="-t", aliases={"--regex-to"}, required=false, metaVar="REGEXTO",
                 usage="Regex to replace REGEXFROM with, uses Java's Matcher.replace (default: " + REGEX_TO + ")")
-        private String regexTo;
+        private String regexTo = REGEX_TO;
 
         @Option(name="-j", aliases={"--threads"}, required=false, metaVar="THREADS",
                 usage="Number of threads to use (default: " + NUM_THREADS + ")")
-        private int numThreads;
+        private int numThreads = NUM_THREADS;
 
         @Option(name="-v", aliases={"--verbose"}, required=false, metaVar="VERBOSE",
                 usage="Print debugging information")
-        private boolean verbose;
+        private boolean verbose = false;
+
+        @Option(name="-f", aliases={"--force"}, required=false, metaVar="FORCE",
+                usage="Force re-compression")
+        private boolean force = false;
 
         public Pattern getFromPattern()
         {
             return Pattern.compile(regexFrom == null ? REGEX_FROM : regexFrom);
-        }
-
-        public int getNumThreads()
-        {
-            return numThreads > 0 ? numThreads : NUM_THREADS;
         }
     }
 
@@ -66,13 +68,17 @@ public class JACSS implements Runnable
     private static final int EXIT_STATUS_INVALID_FILE = 2;
     private static final int EXIT_STATUS_TIMEOUT = 3;
 
+    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss");
+
     private File source;
     private File target;
     private FileInputStream in;
     private FileOutputStream out;
+    private CLI cli;
 
-    public JACSS(File file, Pattern from, String to) throws FileNotFoundException
+    public JACSS(File file, Pattern from, CLI cli) throws FileNotFoundException
     {
+        this.cli = cli;
         source = file;
 
         if (!source.isFile())
@@ -81,41 +87,55 @@ public class JACSS implements Runnable
         }
 
         in = new FileInputStream(source);
-        out = new FileOutputStream(target);
 
-        String filename = from.matcher(source.toString()).replaceAll(to);
+        String filename = from.matcher(source.toString()).replaceAll(cli.regexTo);
         target = new File(filename);
     }
 
     public void run()
     {
-        if (!target.exists() || target.lastModified() < source.lastModified())
+        if (cli.force || !target.exists() || target.lastModified() < source.lastModified())
         {
-            // debug Compressing + target
-            Parser parser = new Parser();
-            Lexer lexer = new Lexer();
-            lexer.addTokenListener(parser);
+            logger.debug("Compressing " + target);
+
             try
             {
-                lexer.parse(in);
-            }
-            catch (IOException e)
-            {
-                e.printStackTrace();
-            }
-            catch (UnrecognizedCharacterException e)
-            {
-                e.printStackTrace();
-            }
-            finally {
+                out = new FileOutputStream(target);
+
+                Parser parser = new Parser(out);
+                Lexer lexer = new Lexer();
+                lexer.addTokenListener(parser);
+                
                 try
                 {
-                    in.close();
+                    lexer.parse(in);
                 }
                 catch (IOException e)
                 {
-                    //
+                    e.printStackTrace();
                 }
+                catch (UnrecognizedCharacterException e)
+                {
+                    e.printStackTrace();
+                }
+                finally
+                {
+                    try
+                    {
+                        in.close();
+                    }
+                    catch (IOException e)
+                    {
+                        //
+                    }
+                }
+            }
+            catch (FileNotFoundException e)
+            {
+                e.printStackTrace();
+            }
+            finally
+            {
                 try
                 {
                     out.close();
@@ -128,12 +148,14 @@ public class JACSS implements Runnable
         }
         else
         {
-            // debug Skipping + target
+            logger.debug("Skipping " + target);
         }
     }
 
     public static void main(String[] args)
     {
+        BasicConfigurator.configure();
+
         CLI cli = new CLI();
         CmdLineParser parser = new CmdLineParser(cli);
         try
@@ -147,14 +169,16 @@ public class JACSS implements Runnable
             System.exit(EXIT_STATUS_INVALID_ARG);
         }
 
+        if (cli.verbose) logger.setLevel(Level.DEBUG);
+
         Pattern from = cli.getFromPattern();
 
-        ExecutorService pool = Executors.newFixedThreadPool(cli.getNumThreads());
+        ExecutorService pool = Executors.newFixedThreadPool(cli.numThreads);
         for (File file : cli.files)
         {
             try
             {
-                pool.submit(new JACSS(file, from, cli.regexTo));
+                pool.submit(new JACSS(file, from, cli));
             }
             catch (FileNotFoundException e)
             {

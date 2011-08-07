@@ -11,7 +11,6 @@ import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.nio.CharBuffer;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -73,7 +72,7 @@ public class Lexer implements ParserState
     {
         tokenListeners = new LinkedList<TokenListener>();
 
-        token = CharBuffer.allocate(255);
+        token = new CharBuffer();
     }
 
     public void addTokenListener(TokenListener listener)
@@ -86,7 +85,7 @@ public class Lexer implements ParserState
         BufferedInputStream bis = new BufferedInputStream(in, 255);
         InputStreamReader reader = new InputStreamReader(bis);
         char c;
-        while ((c = (char) reader.read()) != -1)
+        while ((c = (char) reader.read()) != 65535)
         {
             tokenize(c);
             offset++;
@@ -110,12 +109,13 @@ public class Lexer implements ParserState
 
     public ParserState tokenize(char c) throws UnrecognizedCharacterException
     {
+        if ('\0' == c) return this;
         if (builder == null)
         {
             builder = TOKEN_MAP.get(c);
             if (builder == null)
             {
-                throw new UnrecognizedCharacterException("Unrecognized character at offset " + offset);
+                throw new UnrecognizedCharacterException("Unrecognized character at offset " + offset + ": " + c + " (" + ((int)c) +")");
             }
         }
         builder.handle(this, c);
@@ -170,6 +170,6 @@ public class Lexer implements ParserState
 
     public int get(int index)
     {
-        return token.get(index);
+        return token.charAt(index);
     }
 }
