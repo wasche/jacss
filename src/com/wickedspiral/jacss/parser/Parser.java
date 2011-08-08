@@ -2,6 +2,7 @@ package com.wickedspiral.jacss.parser;
 
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenListener;
+import org.apache.log4j.Logger;
 
 import java.io.OutputStream;
 import java.io.PrintStream;
@@ -41,6 +42,8 @@ public class Parser implements TokenListener
             }
         }
     }
+
+    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss.parser");
 
     // buffers
     private LinkedList<String> ruleBuffer;
@@ -98,6 +101,7 @@ public class Parser implements TokenListener
 
     private void output(String str)
     {
+        logger.debug("output: " + str);
         out.print(str);
         out.flush();
     }
@@ -121,7 +125,7 @@ public class Parser implements TokenListener
         if ("}".equals(str))
         {
             // check for empty rule
-            if (!"{".equals(ruleBuffer.getLast()))
+            if (!ruleBuffer.isEmpty() && !"{".equals(ruleBuffer.getLast()))
             {
                 output(ruleBuffer);
                 output(str);
@@ -183,7 +187,7 @@ public class Parser implements TokenListener
                 buffer("0");
             }
         }
-        else if ("none".equals(value) || (NONE_PROPERTIES.contains(property) || "background".equals(property)))
+        else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)))
         {
             buffer("0");
         }
@@ -197,6 +201,8 @@ public class Parser implements TokenListener
 
     public void token(Token token, String value)
     {
+        logger.debug("Token: " + token + ", Value: " + value + ", Pending: " + pending + ", RuleBuffer:" + ruleBuffer);
+
         if (rgb)
         {
             if (NUMBER == token)
@@ -370,6 +376,7 @@ public class Parser implements TokenListener
             {
                 at = false;
                 dump(value);
+                pending = null;
             }
             else
             {

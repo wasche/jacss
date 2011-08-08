@@ -54,6 +54,10 @@ public class JACSS implements Runnable
                 usage="Print debugging information")
         private boolean verbose = false;
 
+        @Option(name="-vv", aliases={"--very-verbose"}, required=false, metaVar="DEBUG",
+                usage="Print additional debugging information")
+        private boolean debug = false;
+
         @Option(name="-f", aliases={"--force"}, required=false, metaVar="FORCE",
                 usage="Force re-compression")
         private boolean force = false;
@@ -96,7 +100,7 @@ public class JACSS implements Runnable
     {
         if (cli.force || !target.exists() || target.lastModified() < source.lastModified())
         {
-            logger.debug("Compressing " + target);
+            logger.info("Compressing " + source + " to " + target);
 
             try
             {
@@ -126,7 +130,7 @@ public class JACSS implements Runnable
                     }
                     catch (IOException e)
                     {
-                        //
+                        logger.debug("closing input stream");
                     }
                 }
             }
@@ -142,13 +146,13 @@ public class JACSS implements Runnable
                 }
                 catch (IOException e)
                 {
-                    //
+                    logger.debug("closing output stream");
                 }
             }
         }
         else
         {
-            logger.debug("Skipping " + target);
+            logger.info("Skipping " + target);
         }
     }
 
@@ -169,7 +173,9 @@ public class JACSS implements Runnable
             System.exit(EXIT_STATUS_INVALID_ARG);
         }
 
-        if (cli.verbose) logger.setLevel(Level.DEBUG);
+        if (cli.debug) logger.setLevel(Level.DEBUG);
+        else if (cli.verbose) logger.setLevel(Level.INFO);
+        else logger.setLevel(Level.WARN);
 
         Pattern from = cli.getFromPattern();
 
@@ -182,7 +188,7 @@ public class JACSS implements Runnable
             }
             catch (FileNotFoundException e)
             {
-                System.err.println("Could not find file: " + e.getMessage());
+                logger.error("Could not find file: " + e.getMessage());
                 pool.shutdownNow();
                 System.exit(EXIT_STATUS_INVALID_FILE);
             }
@@ -196,6 +202,7 @@ public class JACSS implements Runnable
         }
         catch (InterruptedException e)
         {
+            logger.debug("Timed out waiting for threads to finish.");
             System.exit(EXIT_STATUS_TIMEOUT);
         }
     }

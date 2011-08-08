@@ -6,6 +6,7 @@ import com.wickedspiral.jacss.lexer.builder.NumberTokenBuilder;
 import com.wickedspiral.jacss.lexer.builder.OpTokenBuilder;
 import com.wickedspiral.jacss.lexer.builder.StringTokenBuilder;
 import com.wickedspiral.jacss.lexer.builder.WhiteSpaceTokenBuilder;
+import org.apache.log4j.Logger;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
@@ -60,6 +61,10 @@ public class Lexer implements ParserState
         TOKEN_BUILDER_MAP.put(Token.WHITESPACE, whiteSpaceTokenBuilder);
     }
 
+    private static final char EOF = (char) 65535;
+
+    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss.lexer");
+
     private List<TokenListener> tokenListeners;
 
     private CharBuffer token;
@@ -85,11 +90,13 @@ public class Lexer implements ParserState
         BufferedInputStream bis = new BufferedInputStream(in, 255);
         InputStreamReader reader = new InputStreamReader(bis);
         char c;
-        while ((c = (char) reader.read()) != 65535)
+        while ((c = (char) reader.read()) != EOF)
         {
+            logger.debug("read: " + c + ", offset: " + offset);
             tokenize(c);
             offset++;
         }
+        logger.debug("read: " + c);
 
         // finish whatever is in the buffer
         if (builder != null)
@@ -101,6 +108,7 @@ public class Lexer implements ParserState
             tokenFinished(Token.OP);
         }
 
+        logger.debug("Lexer complete.");
         for (TokenListener listener : tokenListeners)
         {
             listener.end();
@@ -127,7 +135,14 @@ public class Lexer implements ParserState
         String s = token.toString();
         for (TokenListener listener : tokenListeners)
         {
-            listener.token(t, s);
+            try
+            {
+                listener.token(t, s);
+            }
+            catch (Exception e)
+            {
+                e.printStackTrace();
+            }
         }
         token.clear();
         lastToken = s;
