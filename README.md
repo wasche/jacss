@@ -1,5 +1,5 @@
 jacss
 =====
-Java port of [csslex].
+Java port of [ncss].
 
-[csslex]: http://github.com/kurakin/csslex
+[ncss]: http://github.com/kurakin/ncss
