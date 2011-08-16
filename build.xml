@@ -11,7 +11,6 @@
     <path id="project.class.path">
         <pathelement location="${lib}/args4j-2.0.17.jar"/>
         <pathelement location="${lib}/commons-logging-1.1.1.jar"/>
-        <pathelement location="${lib}/log4j-1.2.16.jar"/>
         <pathelement path="${java.class.path}/"/>
     </path>
 
@@ -30,7 +29,6 @@
         <mkdir dir="${dist}/lib"/>
         <jar jarfile="${dist}/lib/jacss.jar" basedir="${build}"/>
         <copy file="${lib}/args4j-2.0.17.jar" todir="${dist}/lib"/>
-        <copy file="${lib}/log4j-1.2.16.jar" todir="${dist}/lib"/>
     </target>
 
     <target name="clean" description="clean up">

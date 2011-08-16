@@ -63,7 +63,7 @@ public class CharBuffer implements CharSequence, Appendable, Comparable<CharBuff
 
     public CharSequence subSequence(int start, int end)
     {
-        return null;
+        return null; // not implemented
     }
 
     public Appendable append(CharSequence charSequence)

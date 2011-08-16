@@ -2,8 +2,8 @@ package com.wickedspiral.jacss.parser;
 
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenListener;
-import org.apache.log4j.Logger;
 
+import java.io.BufferedOutputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
@@ -43,8 +43,6 @@ public class Parser implements TokenListener
         }
     }
 
-    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss.parser");
-
     // buffers
     private LinkedList<String> ruleBuffer;
     private LinkedList<String> valueBuffer;
@@ -67,14 +65,16 @@ public class Parser implements TokenListener
 
     private PrintStream out;
 
+    private boolean debug;
+
     public Parser()
     {
-        this(System.out);
+        this(System.out, false);
     }
 
-    public Parser(OutputStream outputStream)
+    public Parser(OutputStream outputStream, boolean debug)
     {
-        out = new PrintStream(outputStream);
+        out = new PrintStream(new BufferedOutputStream(outputStream));
 
         ruleBuffer = new LinkedList<String>();
         valueBuffer = new LinkedList<String>();
@@ -101,9 +101,7 @@ public class Parser implements TokenListener
 
     private void output(String str)
     {
-        logger.debug("output: " + str);
         out.print(str);
-        out.flush();
     }
 
     private void dump(String str)
@@ -176,7 +174,7 @@ public class Parser implements TokenListener
         }
         String value = sb.toString();
 
-        if ("0 0".equals(value) || "0 0 0 0".equals(value))
+        if ("0 0".equals(value) || "0 0 0 0".equals(value) || "0 0 0".equals(value))
         {
             if (DUAL_ZERO_PROPERTIES.contains(value))
             {
@@ -201,7 +199,7 @@ public class Parser implements TokenListener
 
     public void token(Token token, String value)
     {
-        logger.debug("Token: " + token + ", Value: " + value + ", Pending: " + pending + ", RuleBuffer:" + ruleBuffer);
+        if (debug) System.err.printf("Token: %s, value: %s\n", token, value);
 
         if (rgb)
         {

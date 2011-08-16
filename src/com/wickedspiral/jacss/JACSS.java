@@ -1,11 +1,7 @@
 package com.wickedspiral.jacss;
 
 import com.wickedspiral.jacss.lexer.Lexer;
-import com.wickedspiral.jacss.lexer.UnrecognizedCharacterException;
 import com.wickedspiral.jacss.parser.Parser;
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -54,7 +50,7 @@ public class JACSS implements Runnable
                 usage="Print debugging information")
         private boolean verbose = false;
 
-        @Option(name="-vv", aliases={"--very-verbose"}, required=false, metaVar="DEBUG",
+        @Option(name="-d", aliases={"--debug"}, required=false, metaVar="DEBUG",
                 usage="Print additional debugging information")
         private boolean debug = false;
 
@@ -71,8 +67,6 @@ public class JACSS implements Runnable
     private static final int EXIT_STATUS_INVALID_ARG = 1;
     private static final int EXIT_STATUS_INVALID_FILE = 2;
     private static final int EXIT_STATUS_TIMEOUT = 3;
-
-    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss");
 
     private File source;
     private File target;
@@ -100,13 +94,13 @@ public class JACSS implements Runnable
     {
         if (cli.force || !target.exists() || target.lastModified() < source.lastModified())
         {
-            logger.info("Compressing " + source + " to " + target);
+            if (cli.verbose) System.err.println("Compressing " + source + " to " + target);
 
             try
             {
                 out = new FileOutputStream(target);
 
-                Parser parser = new Parser(out);
+                Parser parser = new Parser(out, cli.debug);
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
                 
@@ -114,11 +108,7 @@ public class JACSS implements Runnable
                 {
                     lexer.parse(in);
                 }
-                catch (IOException e)
-                {
-                    e.printStackTrace();
-                }
-                catch (UnrecognizedCharacterException e)
+                catch (Exception e)
                 {
                     e.printStackTrace();
                 }
@@ -130,7 +120,7 @@ public class JACSS implements Runnable
                     }
                     catch (IOException e)
                     {
-                        logger.debug("closing input stream");
+                        // shh
                     }
                 }
             }
@@ -146,20 +136,18 @@ public class JACSS implements Runnable
                 }
                 catch (IOException e)
                 {
-                    logger.debug("closing output stream");
+                    // shh
                 }
             }
         }
         else
         {
-            logger.info("Skipping " + target);
+            if (cli.verbose) System.err.println("Skipping " + target);
         }
     }
 
     public static void main(String[] args)
     {
-        BasicConfigurator.configure();
-
         CLI cli = new CLI();
         CmdLineParser parser = new CmdLineParser(cli);
         try
@@ -173,11 +161,9 @@ public class JACSS implements Runnable
             System.exit(EXIT_STATUS_INVALID_ARG);
         }
 
-        if (cli.debug) logger.setLevel(Level.DEBUG);
-        else if (cli.verbose) logger.setLevel(Level.INFO);
-        else logger.setLevel(Level.WARN);
-
         Pattern from = cli.getFromPattern();
+
+        if (cli.debug) System.err.println("Debug mode enabled.");
 
         ExecutorService pool = Executors.newFixedThreadPool(cli.numThreads);
         for (File file : cli.files)
@@ -188,7 +174,7 @@ public class JACSS implements Runnable
             }
             catch (FileNotFoundException e)
             {
-                logger.error("Could not find file: " + e.getMessage());
+                System.err.println("Could not find file: " + e.getMessage());
                 pool.shutdownNow();
                 System.exit(EXIT_STATUS_INVALID_FILE);
             }
@@ -202,7 +188,7 @@ public class JACSS implements Runnable
         }
         catch (InterruptedException e)
         {
-            logger.debug("Timed out waiting for threads to finish.");
+            System.err.println("ERROR: Timed out waiting for threads to finish.");
             System.exit(EXIT_STATUS_TIMEOUT);
         }
     }

@@ -6,16 +6,13 @@ import com.wickedspiral.jacss.lexer.builder.NumberTokenBuilder;
 import com.wickedspiral.jacss.lexer.builder.OpTokenBuilder;
 import com.wickedspiral.jacss.lexer.builder.StringTokenBuilder;
 import com.wickedspiral.jacss.lexer.builder.WhiteSpaceTokenBuilder;
-import org.apache.log4j.Logger;
 
 import java.io.BufferedInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author wasche
@@ -23,6 +20,10 @@ import java.util.Map;
  */
 public class Lexer implements ParserState
 {
+    private static final char[] OPS_CHARACTERS = "{}[]()+*=.,;:>~|\\%$#@^!".toCharArray();
+    private static final char[] IDENTIFIER_CHARS = "_-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
+    private static final char[] NUMBER_CHARS = "-.0123456789".toCharArray();
+
     private static WhiteSpaceTokenBuilder whiteSpaceTokenBuilder = new WhiteSpaceTokenBuilder();
     private static OpTokenBuilder opTokenBuilder = new OpTokenBuilder();
     private static IdentifierTokenBuilder identifierTokenBuilder = new IdentifierTokenBuilder();
@@ -30,40 +31,51 @@ public class Lexer implements ParserState
     private static StringTokenBuilder stringTokenBuilder = new StringTokenBuilder();
     private static CommentTokenBuilder commentTokenBuilder = new CommentTokenBuilder();
 
-    private static final Map<Character, TokenBuilder> TOKEN_MAP = new HashMap<Character, TokenBuilder>();
-    private static final Map<Token, TokenBuilder> TOKEN_BUILDER_MAP = new HashMap<Token, TokenBuilder>();
+    private static final TokenBuilder[] TOKEN_MAP = new TokenBuilder[255];
 
     static {
-        for (char t : "{}[]()+*=.,;:>~|\\%$#@^!".toCharArray())
+        for (char t : OPS_CHARACTERS)
         {
-            TOKEN_MAP.put(t, opTokenBuilder);
+            TOKEN_MAP[t] = opTokenBuilder;
         }
-        for (char t : "_-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray())
+        for (char t : IDENTIFIER_CHARS)
         {
-            TOKEN_MAP.put(t, identifierTokenBuilder);
+            TOKEN_MAP[t] = identifierTokenBuilder;
         }
-        for (char t : "-.0123456789".toCharArray())
+        for (char t : NUMBER_CHARS)
         {
-            TOKEN_MAP.put(t, numberTokenBuilder);
+            TOKEN_MAP[t] = numberTokenBuilder;
         }
-        TOKEN_MAP.put('\'', stringTokenBuilder);
-        TOKEN_MAP.put('"', stringTokenBuilder);
-        TOKEN_MAP.put('/', commentTokenBuilder);
-        TOKEN_MAP.put(' ', whiteSpaceTokenBuilder);
-        TOKEN_MAP.put('\t', whiteSpaceTokenBuilder);
-        TOKEN_MAP.put('\n', whiteSpaceTokenBuilder);
+        TOKEN_MAP['\''] = stringTokenBuilder;
+        TOKEN_MAP['"'] = stringTokenBuilder;
+        TOKEN_MAP['/'] = commentTokenBuilder;
+        TOKEN_MAP[' '] = whiteSpaceTokenBuilder;
+        TOKEN_MAP['\t'] = whiteSpaceTokenBuilder;
+        TOKEN_MAP['\n'] = whiteSpaceTokenBuilder;
 
-        TOKEN_BUILDER_MAP.put(Token.OP, opTokenBuilder);
-        TOKEN_BUILDER_MAP.put(Token.IDENTIFIER, identifierTokenBuilder);
-        TOKEN_BUILDER_MAP.put(Token.NUMBER, numberTokenBuilder);
-        TOKEN_BUILDER_MAP.put(Token.STRING, stringTokenBuilder);
-        TOKEN_BUILDER_MAP.put(Token.COMMENT, commentTokenBuilder);
-        TOKEN_BUILDER_MAP.put(Token.WHITESPACE, whiteSpaceTokenBuilder);
+    }
+
+    private static TokenBuilder getBuilderForToken(Token token)
+    {
+        switch (token)
+        {
+            case OP:
+                return opTokenBuilder;
+            case IDENTIFIER:
+                return identifierTokenBuilder;
+            case NUMBER:
+                return numberTokenBuilder;
+            case STRING:
+                return stringTokenBuilder;
+            case COMMENT:
+                return commentTokenBuilder;
+            case WHITESPACE:
+                return whiteSpaceTokenBuilder;
+        }
+        return null;
     }
 
     private static final char EOF = (char) 65535;
-
-    private static Logger logger = Logger.getLogger("com.wickedspiral.jacss.lexer");
 
     private List<TokenListener> tokenListeners;
 
@@ -87,16 +99,14 @@ public class Lexer implements ParserState
 
     public void parse(InputStream in) throws IOException, UnrecognizedCharacterException
     {
-        BufferedInputStream bis = new BufferedInputStream(in, 255);
+        BufferedInputStream bis = new BufferedInputStream(in);
         InputStreamReader reader = new InputStreamReader(bis);
         char c;
         while ((c = (char) reader.read()) != EOF)
         {
-            logger.debug("read: " + c + ", offset: " + offset);
             tokenize(c);
             offset++;
         }
-        logger.debug("read: " + c);
 
         // finish whatever is in the buffer
         if (builder != null)
@@ -108,7 +118,6 @@ public class Lexer implements ParserState
             tokenFinished(Token.OP);
         }
 
-        logger.debug("Lexer complete.");
         for (TokenListener listener : tokenListeners)
         {
             listener.end();
@@ -120,7 +129,7 @@ public class Lexer implements ParserState
         if ('\0' == c) return this;
         if (builder == null)
         {
-            builder = TOKEN_MAP.get(c);
+            builder = TOKEN_MAP[c];
             if (builder == null)
             {
                 throw new UnrecognizedCharacterException("Unrecognized character at offset " + offset + ": " + c + " (" + ((int)c) +")");
@@ -164,7 +173,7 @@ public class Lexer implements ParserState
 
     public ParserState setTokenBuilder(Token token)
     {
-        builder = TOKEN_BUILDER_MAP.get(token);
+        builder = getBuilderForToken(token);
         return this;
     }
 
