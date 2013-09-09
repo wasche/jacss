@@ -20,15 +20,15 @@ import static com.wickedspiral.jacss.lexer.Token.*;
 public class Parser implements TokenListener
 {
     private static final String MS_ALPHA = "progid:dximagetransform.microsoft.alpha(opacity=";
-    private static final Collection<String> UNITS = new HashSet<String>(
+    private static final Collection<String> UNITS = new HashSet<>(
             Arrays.asList("px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%"));
-    private static final Collection<String> KEYWORDS = new HashSet<String>(
+    private static final Collection<String> KEYWORDS = new HashSet<>(
             Arrays.asList("normal", "bold", "italic", "serif", "sans-serif", "fixed"));
-    private static final Collection<String> BOUNDARY_OPS = new HashSet<String>(
+    private static final Collection<String> BOUNDARY_OPS = new HashSet<>(
             Arrays.asList("{", "}", ">", ";", ":", ",")); // or comment
-    private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<String>(
+    private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<>(
             Arrays.asList("background-position", "-webkit-transform-origin", "-moz-transform-origin"));
-    private static final Collection<String> NONE_PROPERTIES = new HashSet<String>();
+    private static final Collection<String> NONE_PROPERTIES = new HashSet<>();
 
     static
     {
@@ -66,19 +66,18 @@ public class Parser implements TokenListener
     private PrintStream out;
 
     private boolean debug;
+    private boolean keepTailingSemicolons;
+    private boolean noCollapseZeroes;
+    private boolean noCollapseNone;
 
-    public Parser()
-    {
-        this(System.out, false);
-    }
-
-    public Parser(OutputStream outputStream, boolean debug)
+    public Parser(OutputStream outputStream, boolean debug, boolean keepTailingSemicolons, boolean noCollapseZeroes,
+                  boolean noCollapseNone)
     {
         out = new PrintStream(new BufferedOutputStream(outputStream));
 
-        ruleBuffer = new LinkedList<String>();
-        valueBuffer = new LinkedList<String>();
-        rgbBuffer = new LinkedList<String>();
+        ruleBuffer = new LinkedList<>();
+        valueBuffer = new LinkedList<>();
+        rgbBuffer = new LinkedList<>();
 
         inRule = false;
         space = false;
@@ -87,6 +86,11 @@ public class Parser implements TokenListener
         ie5mac = false;
         rgb = false;
         checkSpace = -1;
+
+        this.debug = debug;
+        this.keepTailingSemicolons = keepTailingSemicolons;
+        this.noCollapseZeroes = noCollapseZeroes;
+        this.noCollapseNone = noCollapseNone;
     }
 
     // ++ Output functions
@@ -102,6 +106,7 @@ public class Parser implements TokenListener
     private void output(String str)
     {
         out.print(str);
+        out.flush();
     }
 
     private void dump(String str)
@@ -185,7 +190,7 @@ public class Parser implements TokenListener
                 buffer("0");
             }
         }
-        else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)))
+        else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)) && !noCollapseNone)
         {
             buffer("0");
         }
@@ -291,20 +296,23 @@ public class Parser implements TokenListener
 
         // make sure we have space between values for multi-value properties
         // margin: 5px 5px
-        boolean isHash = (HASH == token);
-        boolean isId = (IDENTIFIER == token);
-        boolean wasRParen = (RPAREN == lastToken);
-        if ( ((NUMBER == token || isHash) && NUMBER == lastToken) ||
-             ((NUMBER == token || isId || isHash) &&
-              (IDENTIFIER == lastToken || PERCENT == lastToken || wasRParen)) ||
-             (inRule && isId && wasRParen))
+        if (
+                (
+                        NUMBER == lastToken &&
+                        (HASH == token || NUMBER == token)
+                ) ||
+                (
+                        (IDENTIFIER == lastToken || PERCENT == lastToken || RPAREN == lastToken) &&
+                        (NUMBER == token || IDENTIFIER == token || HASH == token)
+                )
+        )
         {
             queue(" ");
             space = false;
         }
 
         // rgb()
-        if (isId && "rgb".equals(value))
+        if (IDENTIFIER == token && "rgb".equals(value))
         {
             rgb = true;
             space = false;
@@ -396,6 +404,10 @@ public class Parser implements TokenListener
             }
             if (";".equals(pending))
             {
+                if (keepTailingSemicolons)
+                {
+                    buffer(";");
+                }
                 pending = value;
             }
             else
@@ -407,7 +419,7 @@ public class Parser implements TokenListener
         }
         else if (!inRule)
         {
-            if (!space || GT == token || (COLON == token && !space) || lastToken == null || BOUNDARY_OPS.contains(value))
+            if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains(value))
             {
                 queue(value);
             }
@@ -417,14 +429,24 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                queue(" ");
+                if ( RBRACE != lastToken )
+                {
+                    queue(" ");
+                }
                 queue(value);
                 space = false;
             }
         }
         else if (NUMBER == token && value.startsWith("0."))
         {
-            queue(value.substring(1));
+            if (noCollapseZeroes)
+            {
+                queue( value );
+            }
+            else
+            {
+                queue(value.substring(1));
+            }
         }
         else if (STRING == token && "-ms-filter".equals(property))
         {
@@ -461,7 +483,7 @@ public class Parser implements TokenListener
         {
             String v = value.toLowerCase();
             // values of 0 don't need a unit
-            if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || isId))
+            if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
                 if (!UNITS.contains(value))
                 {
@@ -470,12 +492,12 @@ public class Parser implements TokenListener
                 }
             }
             // use 0 instead of none
-            else if (COLON == lastToken && "none".equals(value) && NONE_PROPERTIES.contains(property))
+            else if (COLON == lastToken && "none".equals(value) && NONE_PROPERTIES.contains(property) && !noCollapseNone)
             {
                 queue("0");
             }
             // force properties to lower case for better gzip compression
-            else if (COLON == lastToken && isId)
+            else if (COLON != lastToken && IDENTIFIER == token)
             {
                 // #aabbcc
                 if (HASH == lastToken)

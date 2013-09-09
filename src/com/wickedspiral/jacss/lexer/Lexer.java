@@ -87,7 +87,7 @@ public class Lexer implements ParserState
 
     public Lexer()
     {
-        tokenListeners = new LinkedList<TokenListener>();
+        tokenListeners = new LinkedList<>();
 
         token = new CharBuffer();
     }
@@ -195,5 +195,12 @@ public class Lexer implements ParserState
     public int get(int index)
     {
         return token.charAt(index);
+    }
+
+    @Override
+    public ParserState clearToken()
+    {
+        token.clear();
+        return this;
     }
 }

@@ -3,6 +3,7 @@ package com.wickedspiral.jacss.lexer.builder;
 import com.wickedspiral.jacss.lexer.ParserState;
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenBuilder;
+import com.wickedspiral.jacss.lexer.UnrecognizedCharacterException;
 
 /**
  * @author wasche
@@ -10,14 +11,15 @@ import com.wickedspiral.jacss.lexer.TokenBuilder;
  */
 public class CommentTokenBuilder implements TokenBuilder
 {
-    public void handle(ParserState state, char c)
+    public void handle(ParserState state, char c) throws UnrecognizedCharacterException
     {
         if (state.getTokenLength() == 1 && c != '*')
         {
             // oops, not a comment, just a /
             state.tokenFinished(Token.OP)
-                 .push(c)
-                 .unsetTokenBuilder();
+                 .clearToken()
+                 .unsetTokenBuilder()
+                 .tokenize(c);
         }
         else if (c == '/' && state.getLastCharacter() == '*')
         {

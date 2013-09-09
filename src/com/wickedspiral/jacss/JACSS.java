@@ -1,6 +1,7 @@
 package com.wickedspiral.jacss;
 
 import com.wickedspiral.jacss.lexer.Lexer;
+import com.wickedspiral.jacss.lexer.UnrecognizedCharacterException;
 import com.wickedspiral.jacss.parser.Parser;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
@@ -12,6 +13,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -58,6 +60,21 @@ public class JACSS implements Runnable
                 usage="Force re-compression")
         private boolean force = false;
 
+        @Option(name = "-O", aliases = {"--stdout"}, required = false, usage = "Print to stdout instead of to file")
+        private boolean stdout = false;
+
+        @Option(name="--keep-trailing-semicolons", required = false,
+                usage = "Do not strip commas on last style of a rule")
+        private boolean keepTailingSemicolons = false;
+
+        @Option(name = "--no-collapse-zeroes", required = false,
+                usage = "Do not drop leading zero in floats less than 1")
+        private boolean noCollapseZeroes = false;
+
+        @Option(name = "--no-collapse-none", required = false,
+                usage = "Do not collapse none to 0")
+        private boolean noCollapseNone = false;
+
         public Pattern getFromPattern()
         {
             return Pattern.compile(regexFrom == null ? REGEX_FROM : regexFrom);
@@ -70,8 +87,6 @@ public class JACSS implements Runnable
 
     private File source;
     private File target;
-    private FileInputStream in;
-    private FileOutputStream out;
     private CLI cli;
 
     public JACSS(File file, Pattern from, CLI cli) throws FileNotFoundException
@@ -84,8 +99,6 @@ public class JACSS implements Runnable
             throw new FileNotFoundException(source.toString());
         }
 
-        in = new FileInputStream(source);
-
         String filename = from.matcher(source.toString()).replaceAll(cli.regexTo);
         target = new File(filename);
     }
@@ -96,48 +109,23 @@ public class JACSS implements Runnable
         {
             if (cli.verbose) System.err.println("Compressing " + source + " to " + target);
 
-            try
+            try(
+                    FileInputStream in = new FileInputStream(source);
+                    OutputStream out = cli.stdout ? System.out : new FileOutputStream(target)
+            )
             {
-                out = new FileOutputStream(target);
-
-                Parser parser = new Parser(out, cli.debug);
+                Parser parser = new Parser(
+                        out,
+                        cli.debug, cli.keepTailingSemicolons, cli.noCollapseZeroes, cli.noCollapseNone
+                );
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
                 
-                try
-                {
-                    lexer.parse(in);
-                }
-                catch (Exception e)
-                {
-                    e.printStackTrace();
-                }
-                finally
-                {
-                    try
-                    {
-                        in.close();
-                    }
-                    catch (IOException e)
-                    {
-                        // shh
-                    }
-                }
+                lexer.parse(in);
             }
-            catch (FileNotFoundException e)
+            catch (UnrecognizedCharacterException | IOException e)
             {
                 e.printStackTrace();
-            }
-            finally
-            {
-                try
-                {
-                    out.close();
-                }
-                catch (IOException e)
-                {
-                    // shh
-                }
             }
         }
         else

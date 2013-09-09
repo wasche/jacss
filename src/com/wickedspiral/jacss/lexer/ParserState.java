@@ -15,4 +15,5 @@ public interface ParserState
     public int get(int index);
     public ParserState setTokenBuilder(Token token);
     public String getLastToken();
+    public ParserState clearToken();
 }

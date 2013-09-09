@@ -10,7 +10,6 @@
     
     <path id="project.class.path">
         <pathelement location="${lib}/args4j-2.0.17.jar"/>
-        <pathelement location="${lib}/commons-logging-1.1.1.jar"/>
         <pathelement path="${java.class.path}/"/>
     </path>
 
@@ -27,8 +26,17 @@
 
     <target name="dist" depends="build" description="generate the distribution">
         <mkdir dir="${dist}/lib"/>
-        <jar jarfile="${dist}/lib/jacss.jar" basedir="${build}"/>
-        <copy file="${lib}/args4j-2.0.17.jar" todir="${dist}/lib"/>
+        <jar jarfile="${dist}/lib/jacss-no-deps.jar" basedir="${build}">
+            <manifest>
+                <attribute name="Main-Class" value="com.wickedspiral.jacss.JACSS"/>
+            </manifest>
+        </jar>
+        <jar jarfile="${dist}/lib/jacss.jar" basedir="${build}">
+            <zipfileset includes="**/*.class" src="${lib}/args4j-2.0.17.jar"/>
+            <manifest>
+                <attribute name="Main-Class" value="com.wickedspiral.jacss.JACSS"/>
+            </manifest>
+        </jar>
     </target>
 
     <target name="clean" description="clean up">
