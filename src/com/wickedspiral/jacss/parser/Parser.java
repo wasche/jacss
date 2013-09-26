@@ -508,8 +508,8 @@ public class Parser implements TokenListener
                             v.charAt(4) == v.charAt(5))
                     {
                         queue(v.substring(0, 1));
-                        queue(v.substring(2, 1));
-                        queue(v.substring(4, 1));
+                        queue(v.substring(2, 3));
+                        queue(v.substring(4, 5));
                     }
                     else
                     {
