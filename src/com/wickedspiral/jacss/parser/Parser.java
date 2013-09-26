@@ -106,7 +106,7 @@ public class Parser implements TokenListener
     private void output(String str)
     {
         out.print(str);
-        out.flush();
+        // out.flush();
     }
 
     private void dump(String str)
