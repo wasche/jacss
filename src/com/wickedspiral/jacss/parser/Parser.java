@@ -502,18 +502,18 @@ public class Parser implements TokenListener
                 // #aabbcc
                 if (HASH == lastToken)
                 {
-                    if (value.length() == 6 &&
-                            v.charAt(0) == v.charAt(1) &&
-                            v.charAt(2) == v.charAt(3) &&
-                            v.charAt(4) == v.charAt(5))
+                    if (v.length() == 6 &&
+                        v.charAt(0) == v.charAt(1) &&
+                        v.charAt(2) == v.charAt(3) &&
+                        v.charAt(4) == v.charAt(5))
                     {
-                        queue(v.substring(0, 1));
-                        queue(v.substring(2, 3));
-                        queue(v.substring(4, 5));
+                        queue(value.substring(0, 1));
+                        queue(value.substring(2, 3));
+                        queue(value.substring(4, 5));
                     }
                     else
                     {
-                        queue(v);
+                        queue(value);
                     }
                 }
                 else
