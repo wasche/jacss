@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 /**
@@ -84,6 +85,9 @@ public class JACSS implements Runnable
     private static final int EXIT_STATUS_INVALID_ARG = 1;
     private static final int EXIT_STATUS_INVALID_FILE = 2;
     private static final int EXIT_STATUS_TIMEOUT = 3;
+    private static final int EXIT_STATUS_COMPRESSION_FAILED = 4;
+    
+    private static final AtomicInteger numFailures = new AtomicInteger();
 
     private File source;
     private File target;
@@ -123,9 +127,11 @@ public class JACSS implements Runnable
                 
                 lexer.parse(in);
             }
-            catch (UnrecognizedCharacterException | IOException e)
+            catch (Exception e)
             {
-                e.printStackTrace();
+                numFailures.incrementAndGet();
+                System.err.println("Compression failed for " + source);
+                e.printStackTrace(System.err);
             }
         }
         else
@@ -179,5 +185,7 @@ public class JACSS implements Runnable
             System.err.println("ERROR: Timed out waiting for threads to finish.");
             System.exit(EXIT_STATUS_TIMEOUT);
         }
+        
+        System.exit(numFailures.get() == 0 ? 0 : EXIT_STATUS_COMPRESSION_FAILED);
     }
 }
