@@ -144,14 +144,7 @@ public class Lexer implements ParserState
         String s = token.toString();
         for (TokenListener listener : tokenListeners)
         {
-            try
-            {
-                listener.token(t, s);
-            }
-            catch (Exception e)
-            {
-                e.printStackTrace();
-            }
+            listener.token(t, s);
         }
         token.clear();
         lastToken = s;
