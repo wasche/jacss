@@ -13,6 +13,13 @@
         <pathelement path="${java.class.path}/"/>
     </path>
 
+    <path id="testing.path">
+      <pathelement location="lib/testng-6.8.jar"/>
+      <pathelement location="${build}"/>
+    </path>
+
+    <taskdef name="testng" classpathref="testing.path" classname="org.testng.TestNGAntTask"/>
+
     <target name="init">
         <tstamp/>
         <mkdir dir="${build}"/>
@@ -43,4 +50,11 @@
         <delete dir="${build}"/>
         <delete dir="${dist}"/>
     </target>
+
+    <target name="test" description="run tests">
+      <testng classpathref="testing.path">
+        <classfileset dir="${build}" includes="com.wickedspiral.jacss.JACSSTest"/>
+      </testng>
+    </target>
+
 </project>
