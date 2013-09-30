@@ -20,7 +20,7 @@ import java.util.List;
  */
 public class Lexer implements ParserState
 {
-    private static final char[] OPS_CHARACTERS = "{}[]()+*=.,;:>~|\\%$#@^!".toCharArray();
+    private static final char[] OPS_CHARACTERS = "{}[]()+*=.,;:>~|\\%$#@^!?".toCharArray();
     private static final char[] IDENTIFIER_CHARS = "_-abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
     private static final char[] NUMBER_CHARS = "-.0123456789".toCharArray();
 

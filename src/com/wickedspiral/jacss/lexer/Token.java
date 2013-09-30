@@ -34,7 +34,8 @@ public enum Token
     BACKSLASH,
     DOLLAR,
     CARROT,
-    BANG
+    BANG,
+    QUESTION
     ;
 
     public static Token getByCharacter(char c)
@@ -87,6 +88,8 @@ public enum Token
                 return CARROT;
             case '!':
                 return BANG;
+            case '?':
+                return QUESTION;
             case ' ':
                 return WHITESPACE;
             default:
