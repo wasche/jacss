@@ -1,15 +1,13 @@
 package com.wickedspiral.jacss.parser;
 
-import com.wickedspiral.jacss.lexer.Token;
-import com.wickedspiral.jacss.lexer.TokenListener;
-
-import java.io.BufferedOutputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
+
+import com.wickedspiral.jacss.lexer.Token;
+import com.wickedspiral.jacss.lexer.TokenListener;
 
 import static com.wickedspiral.jacss.lexer.Token.*;
 
@@ -70,10 +68,10 @@ public class Parser implements TokenListener
     private boolean noCollapseZeroes;
     private boolean noCollapseNone;
 
-    public Parser(OutputStream outputStream, boolean debug, boolean keepTailingSemicolons, boolean noCollapseZeroes,
+    public Parser(PrintStream outputStream, boolean debug, boolean keepTailingSemicolons, boolean noCollapseZeroes,
                   boolean noCollapseNone)
     {
-        out = new PrintStream(new BufferedOutputStream(outputStream));
+        out = outputStream;
 
         ruleBuffer = new LinkedList<>();
         valueBuffer = new LinkedList<>();
@@ -105,8 +103,7 @@ public class Parser implements TokenListener
 
     private void output(String str)
     {
-        out.print(str);
-        out.flush();
+        out.print( str );
     }
 
     private void dump(String str)

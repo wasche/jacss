@@ -1,25 +1,24 @@
 package com.wickedspiral.jacss;
 
-import com.wickedspiral.jacss.lexer.Lexer;
-import com.wickedspiral.jacss.lexer.UnrecognizedCharacterException;
-import com.wickedspiral.jacss.parser.Parser;
-import org.kohsuke.args4j.Argument;
-import org.kohsuke.args4j.CmdLineException;
-import org.kohsuke.args4j.CmdLineParser;
-import org.kohsuke.args4j.Option;
-
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
+
+import com.wickedspiral.jacss.lexer.Lexer;
+import com.wickedspiral.jacss.parser.Parser;
+import org.kohsuke.args4j.Argument;
+import org.kohsuke.args4j.CmdLineException;
+import org.kohsuke.args4j.CmdLineParser;
+import org.kohsuke.args4j.Option;
 
 /**
  * @author wasche
@@ -115,7 +114,9 @@ public class JACSS implements Runnable
 
             try(
                     FileInputStream in = new FileInputStream(source);
-                    OutputStream out = cli.stdout ? System.out : new FileOutputStream(target)
+                    PrintStream out = new PrintStream(new BufferedOutputStream(
+                        cli.stdout ? System.out : new FileOutputStream(target)
+                    ))
             )
             {
                 Parser parser = new Parser(
@@ -125,7 +126,7 @@ public class JACSS implements Runnable
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
                 
-                lexer.parse(in);
+                lexer.parse( in );
             }
             catch (Exception e)
             {
