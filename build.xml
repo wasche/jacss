@@ -19,7 +19,7 @@
     </target>
 
     <target name="build" depends="init" description="compile the source">
-        <javac srcdir="${src}" destdir="${build}" debug="true">
+        <javac srcdir="${src}" destdir="${build}">
             <classpath refid="project.class.path"/>
         </javac>
     </target>
