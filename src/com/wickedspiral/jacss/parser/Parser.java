@@ -3,15 +3,28 @@ package com.wickedspiral.jacss.parser;
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenListener;
 
-import java.io.BufferedOutputStream;
-import java.io.OutputStream;
 import java.io.PrintStream;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 
-import static com.wickedspiral.jacss.lexer.Token.*;
+import static com.wickedspiral.jacss.lexer.Token.AT;
+import static com.wickedspiral.jacss.lexer.Token.COLON;
+import static com.wickedspiral.jacss.lexer.Token.COMMENT;
+import static com.wickedspiral.jacss.lexer.Token.EQUALS;
+import static com.wickedspiral.jacss.lexer.Token.GT;
+import static com.wickedspiral.jacss.lexer.Token.HASH;
+import static com.wickedspiral.jacss.lexer.Token.IDENTIFIER;
+import static com.wickedspiral.jacss.lexer.Token.LBRACE;
+import static com.wickedspiral.jacss.lexer.Token.LPAREN;
+import static com.wickedspiral.jacss.lexer.Token.NUMBER;
+import static com.wickedspiral.jacss.lexer.Token.PERCENT;
+import static com.wickedspiral.jacss.lexer.Token.RBRACE;
+import static com.wickedspiral.jacss.lexer.Token.RPAREN;
+import static com.wickedspiral.jacss.lexer.Token.SEMICOLON;
+import static com.wickedspiral.jacss.lexer.Token.STRING;
+import static com.wickedspiral.jacss.lexer.Token.WHITESPACE;
 
 /**
  * @author wasche
@@ -70,10 +83,10 @@ public class Parser implements TokenListener
     private boolean noCollapseZeroes;
     private boolean noCollapseNone;
 
-    public Parser(OutputStream outputStream, boolean debug, boolean keepTailingSemicolons, boolean noCollapseZeroes,
+    public Parser(PrintStream outputStream, boolean debug, boolean keepTailingSemicolons, boolean noCollapseZeroes,
                   boolean noCollapseNone)
     {
-        out = new PrintStream(new BufferedOutputStream(outputStream));
+        out = outputStream;
 
         ruleBuffer = new LinkedList<>();
         valueBuffer = new LinkedList<>();

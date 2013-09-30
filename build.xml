@@ -9,11 +9,14 @@
     <property name="dist" location="dist"/>
     
     <path id="project.class.path">
-        <pathelement location="${lib}/args4j-2.0.17.jar"/>
-        <pathelement path="${java.class.path}/"/>
+      <pathelement location="${lib}/args4j-2.0.17.jar"/>
+      <pathelement location="${lib}/guava-15.0.jar"/>
+      <pathelement path="${java.class.path}/"/>
     </path>
 
     <path id="testing.path">
+      <pathelement location="${lib}/args4j-2.0.17.jar"/>
+      <pathelement location="${lib}/guava-15.0.jar"/>
       <pathelement location="lib/testng-6.8.jar"/>
       <pathelement location="${build}"/>
     </path>
@@ -52,8 +55,9 @@
     </target>
 
     <target name="test" description="run tests">
-      <testng classpathref="testing.path">
-        <classfileset dir="${build}" includes="com.wickedspiral.jacss.JACSSTest"/>
+      <testng classpathref="testing.path"
+              outputdir="reports">
+        <classfileset dir="${build}" includes="**/JACSSTest.class"/>
       </testng>
     </target>
 

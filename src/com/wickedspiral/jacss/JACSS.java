@@ -1,19 +1,21 @@
 package com.wickedspiral.jacss;
 
 import com.wickedspiral.jacss.lexer.Lexer;
-import com.wickedspiral.jacss.lexer.UnrecognizedCharacterException;
 import com.wickedspiral.jacss.parser.Parser;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
 import org.kohsuke.args4j.Option;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -27,7 +29,7 @@ import java.util.regex.Pattern;
  */
 public class JACSS implements Runnable
 {
-    private static class CLI
+    public static class CLI
     {
         private static final String REGEX_FROM = "-gen.css$";
         private static final String REGEX_TO = "-c.css";
@@ -89,33 +91,53 @@ public class JACSS implements Runnable
     
     private static final AtomicInteger numFailures = new AtomicInteger();
 
-    private File source;
-    private File target;
+    private String sourceName;
+    private String targetName;
+    private InputStream source;
+    private OutputStream target;
     private CLI cli;
+    private boolean shouldCompress = true;
 
     public JACSS(File file, Pattern from, CLI cli) throws FileNotFoundException
     {
         this.cli = cli;
-        source = file;
 
-        if (!source.isFile())
+        if ( !file.isFile() )
         {
             throw new FileNotFoundException(source.toString());
         }
 
-        String filename = from.matcher(source.toString()).replaceAll(cli.regexTo);
-        target = new File(filename);
+        sourceName = file.getName();
+        targetName = from.matcher(source.toString()).replaceAll(cli.regexTo);
+        File toFile = new File( targetName );
+
+        if ( toFile.exists() && toFile.lastModified() >= file.lastModified() )
+        {
+            shouldCompress = cli.force;
+        }
+
+        source = new FileInputStream( file );
+        target = cli.stdout ? System.out : new FileOutputStream( targetName );
+    }
+
+    public JACSS( InputStream source, OutputStream target, CLI cli ) throws FileNotFoundException
+    {
+        this.sourceName = "<in>";
+        this.targetName = "<out>";
+        this.source = source;
+        this.target = target;
+        this.cli = cli;
     }
 
     public void run()
     {
-        if (cli.force || !target.exists() || target.lastModified() < source.lastModified())
+        if ( shouldCompress )
         {
-            if (cli.verbose) System.err.println("Compressing " + source + " to " + target);
+            if (cli.verbose) System.err.println( "Compressing " + sourceName + " to " + targetName );
 
             try(
-                    FileInputStream in = new FileInputStream(source);
-                    OutputStream out = cli.stdout ? System.out : new FileOutputStream(target)
+                    BufferedInputStream in = new BufferedInputStream( source );
+                    PrintStream out = new PrintStream( new BufferedOutputStream( target ) )
             )
             {
                 Parser parser = new Parser(
@@ -125,18 +147,18 @@ public class JACSS implements Runnable
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
                 
-                lexer.parse(in);
+                lexer.parse( in );
             }
             catch (Exception e)
             {
                 numFailures.incrementAndGet();
-                System.err.println("Compression failed for " + source);
-                e.printStackTrace(System.err);
+                System.err.println("Compression failed for " + sourceName);
+                e.printStackTrace( System.err );
             }
         }
         else
         {
-            if (cli.verbose) System.err.println("Skipping " + target);
+            if (cli.verbose) System.err.println("Skipping " + targetName);
         }
     }
 
