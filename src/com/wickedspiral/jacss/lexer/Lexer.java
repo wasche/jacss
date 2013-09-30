@@ -127,13 +127,13 @@ public class Lexer implements ParserState
     public ParserState tokenize(char c) throws UnrecognizedCharacterException
     {
         if ('\0' == c) return this;
-        if (builder == null)
+        if (builder == null && c < TOKEN_MAP.length)
         {
             builder = TOKEN_MAP[c];
-            if (builder == null)
-            {
-                throw new UnrecognizedCharacterException("Unrecognized character at offset " + offset + ": " + c + " (" + ((int)c) +")");
-            }
+        }
+        if (builder == null)
+        {
+            throw new UnrecognizedCharacterException("Unrecognized character at offset " + offset + ": " + c + " (" + ((int)c) +")");
         }
         builder.handle(this, c);
         return this;
