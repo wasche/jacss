@@ -450,7 +450,7 @@ public class Parser implements TokenListener
         }
         else if (STRING == token && "-ms-filter".equals(property))
         {
-            if (MS_ALPHA.equals(value.substring(1, MS_ALPHA.length() + 1).toLowerCase()))
+            if (value.toLowerCase().startsWith(MS_ALPHA, 1))
             {
                 String c = value.substring(0, 1);
                 String o = value.substring(MS_ALPHA.length()+1, value.length()-2);
