@@ -29,54 +29,31 @@ import java.util.regex.Pattern;
  */
 public class JACSS implements Runnable
 {
-    public static class CLI
-    {
-        private static final String REGEX_FROM = "-gen.css$";
-        private static final String REGEX_TO = "-c.css";
-        private static final int NUM_THREADS = 1;
 
-        @SuppressWarnings({"MismatchedQueryAndUpdateOfCollection"})
-        @Argument(required=true, metaVar="FILE", usage="List of files to compress")
+    private static class CLI extends Options
+    {
+        private static final String REGEX_FROM  = "-gen.css$";
+        private static final String REGEX_TO    = "-c.css";
+        private static final int    NUM_THREADS = 1;
+
+        @SuppressWarnings({ "MismatchedQueryAndUpdateOfCollection" })
+        @Argument(required = true, metaVar = "FILE", usage = "List of files to compress")
         private List<File> files;
 
-        @Option(name="-r", aliases = {"--regex-from"}, required=false, metaVar="REGEXFROM",
-                usage="Regex to replace with REGEXTO in new file names (default: " + REGEX_FROM + ")")
+        @Option(name = "-r", aliases = { "--regex-from" }, required = false, metaVar = "REGEXFROM",
+            usage = "Regex to replace with REGEXTO in new file names (default: " + REGEX_FROM + ")")
         private String regexFrom = REGEX_FROM;
 
-        @Option(name="-t", aliases={"--regex-to"}, required=false, metaVar="REGEXTO",
-                usage="Regex to replace REGEXFROM with, uses Java's Matcher.replace (default: " + REGEX_TO + ")")
+        @Option(name = "-t", aliases = { "--regex-to" }, required = false, metaVar = "REGEXTO",
+            usage = "Regex to replace REGEXFROM with, uses Java's Matcher.replace (default: " + REGEX_TO + ")")
         private String regexTo = REGEX_TO;
 
         @Option(name="-j", aliases={"--threads"}, required=false, metaVar="THREADS",
                 usage="Number of threads to use (default: " + NUM_THREADS + ")")
         private int numThreads = NUM_THREADS;
 
-        @Option(name="-v", aliases={"--verbose"}, required=false, metaVar="VERBOSE",
-                usage="Print debugging information")
-        private boolean verbose = false;
-
-        @Option(name="-d", aliases={"--debug"}, required=false, metaVar="DEBUG",
-                usage="Print additional debugging information")
-        private boolean debug = false;
-
-        @Option(name="-f", aliases={"--force"}, required=false, metaVar="FORCE",
-                usage="Force re-compression")
-        private boolean force = false;
-
         @Option(name = "-O", aliases = {"--stdout"}, required = false, usage = "Print to stdout instead of to file")
         private boolean stdout = false;
-
-        @Option(name="--keep-trailing-semicolons", required = false,
-                usage = "Do not strip commas on last style of a rule")
-        private boolean keepTailingSemicolons = false;
-
-        @Option(name = "--no-collapse-zeroes", required = false,
-                usage = "Do not drop leading zero in floats less than 1")
-        private boolean noCollapseZeroes = false;
-
-        @Option(name = "--no-collapse-none", required = false,
-                usage = "Do not collapse none to 0")
-        private boolean noCollapseNone = false;
 
         public Pattern getFromPattern()
         {
@@ -91,59 +68,70 @@ public class JACSS implements Runnable
     
     private static final AtomicInteger numFailures = new AtomicInteger();
 
-    private String sourceName;
-    private String targetName;
-    private InputStream source;
-    private OutputStream target;
-    private CLI cli;
-    private boolean shouldCompress = true;
+    private final String sourceName;
+    private final String targetName;
+    private final InputStream source;
+    private final OutputStream target;
+    private final Options options;
+    private final boolean shouldCompress;
 
-    public JACSS(File file, Pattern from, CLI cli) throws FileNotFoundException
+    public JACSS( File file, File from, Options options ) throws FileNotFoundException
     {
-        this.cli = cli;
+        this.options = options;
 
         if ( !file.isFile() )
         {
-            throw new FileNotFoundException(source.toString());
+            throw new FileNotFoundException(file.toString());
         }
 
         sourceName = file.getName();
-        targetName = from.matcher(source.toString()).replaceAll(cli.regexTo);
-        File toFile = new File( targetName );
+        targetName = from.getName();
 
-        if ( toFile.exists() && toFile.lastModified() >= file.lastModified() )
-        {
-            shouldCompress = cli.force;
-        }
+        shouldCompress = options.force || !(from.exists() && from.lastModified() >= file.lastModified());
 
         source = new FileInputStream( file );
-        target = cli.stdout ? System.out : new FileOutputStream( targetName );
+        target = new FileOutputStream( from );
+    }
+    
+    public JACSS( File source, OutputStream target, Options options ) throws FileNotFoundException
+    {
+        this.options = options;
+        
+        if ( !source.isFile() )
+        {
+            throw new FileNotFoundException( source.toString() );
+        }
+        
+        sourceName = source.getName();
+        targetName = "<out>";
+        
+        this.source = new FileInputStream( source );
+        this.target = target;
+        shouldCompress = true;
     }
 
-    public JACSS( InputStream source, OutputStream target, CLI cli ) throws FileNotFoundException
+    public JACSS( InputStream source, OutputStream target, Options options ) throws FileNotFoundException
     {
         this.sourceName = "<in>";
         this.targetName = "<out>";
         this.source = source;
         this.target = target;
-        this.cli = cli;
+        this.options = options;
+        shouldCompress = true;
     }
 
     public void run()
     {
         if ( shouldCompress )
         {
-            if (cli.verbose) System.err.println( "Compressing " + sourceName + " to " + targetName );
+            if (options.verbose) System.err.println( "Compressing " + sourceName + " to " + targetName );
 
             try(
                     BufferedInputStream in = new BufferedInputStream( source );
                     PrintStream out = new PrintStream( new BufferedOutputStream( target ) )
             )
             {
-                Parser parser = new Parser(
-                        out,
-                        cli.debug, cli.keepTailingSemicolons, cli.noCollapseZeroes, cli.noCollapseNone
-                );
+                Parser parser = new Parser( out, options );
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
                 
@@ -158,7 +146,7 @@ public class JACSS implements Runnable
         }
         else
         {
-            if (cli.verbose) System.err.println("Skipping " + targetName);
+            if (options.verbose) System.err.println("Skipping " + targetName);
         }
     }
 
@@ -176,6 +164,7 @@ public class JACSS implements Runnable
             parser.printUsage(System.err);
             System.exit(EXIT_STATUS_INVALID_ARG);
         }
+        cli.imply();
 
         Pattern from = cli.getFromPattern();
 
@@ -186,7 +175,17 @@ public class JACSS implements Runnable
         {
             try
             {
-                pool.submit(new JACSS(file, from, cli));
+                JACSS jacss;
+                if ( cli.stdout )
+                {
+                    jacss = new JACSS( file, System.out, cli );
+                }
+                else
+                {
+                    File f = new File( from.matcher(file.toString()).replaceAll(cli.regexTo) );
+                    jacss = new JACSS(file, f, cli);
+                }
+                pool.submit( jacss );
             }
             catch (FileNotFoundException e)
             {

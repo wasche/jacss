@@ -1,5 +1,6 @@
 package com.wickedspiral.jacss.parser;
 
+import com.wickedspiral.jacss.Options;
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenListener;
 
@@ -60,7 +61,7 @@ public class Parser implements TokenListener
     private LinkedList<String> ruleBuffer;
     private LinkedList<String> valueBuffer;
     private LinkedList<String> rgbBuffer;
-    private String pending;
+    private String             pending;
 
     // flags
     private boolean inRule;
@@ -69,22 +70,18 @@ public class Parser implements TokenListener
     private boolean at;
     private boolean ie5mac;
     private boolean rgb;
-    private int checkSpace;
+    private int     checkSpace;
 
     // other state
     private String property;
-    private Token lastToken;
+    private Token  lastToken;
     private String lastValue;
 
-    private PrintStream out;
+    private final PrintStream out;
 
-    private boolean debug;
-    private boolean keepTailingSemicolons;
-    private boolean noCollapseZeroes;
-    private boolean noCollapseNone;
+    private final Options options;
 
-    public Parser(PrintStream outputStream, boolean debug, boolean keepTailingSemicolons, boolean noCollapseZeroes,
-                  boolean noCollapseNone)
+    public Parser( PrintStream outputStream, Options options )
     {
         out = outputStream;
 
@@ -100,109 +97,106 @@ public class Parser implements TokenListener
         rgb = false;
         checkSpace = -1;
 
-        this.debug = debug;
-        this.keepTailingSemicolons = keepTailingSemicolons;
-        this.noCollapseZeroes = noCollapseZeroes;
-        this.noCollapseNone = noCollapseNone;
+        this.options = options;
     }
 
     // ++ Output functions
 
-    private void output(Collection<String> strings)
+    private void output( Collection<String> strings )
     {
-        for (String s : strings)
+        for ( String s : strings )
         {
-            output(s);
+            output( s );
         }
     }
 
-    private void output(String str)
+    private void output( String str )
     {
         out.print( str );
     }
 
-    private void dump(String str)
+    private void dump( String str )
     {
-        ruleBuffer.add(pending);
-        ruleBuffer.add(str);
-        output(ruleBuffer);
+        ruleBuffer.add( pending );
+        ruleBuffer.add( str );
+        output( ruleBuffer );
         ruleBuffer.clear();
     }
 
-    private void write(String str)
+    private void write( String str )
     {
-        if (str == null || str.length() == 0) return;
+        if ( str == null || str.length() == 0 ) return;
 
-        if (str.startsWith("/*!") && ruleBuffer.isEmpty())
+        if ( str.startsWith( "/*!" ) && ruleBuffer.isEmpty() )
         {
-            output(str);
+            output( str );
         }
-        if ("}".equals(str))
+        if ( "}".equals( str ) )
         {
             // check for empty rule
-            if (!ruleBuffer.isEmpty() && !"{".equals(ruleBuffer.getLast()))
+            if ( !ruleBuffer.isEmpty() && !"{".equals( ruleBuffer.getLast() ) )
             {
-                output(ruleBuffer);
-                output(str);
+                output( ruleBuffer );
+                output( str );
             }
             ruleBuffer.clear();
         }
         else
         {
-            ruleBuffer.add(str);
+            ruleBuffer.add( str );
         }
     }
 
-    private void buffer(String str)
+    private void buffer( String str )
     {
-        if (str == null || str.length() == 0) return;
+        if ( str == null || str.length() == 0 ) return;
 
-        if (pending == null)
+        if ( pending == null )
         {
             pending = str;
         }
         else
         {
-            write(pending);
+            write( pending );
             pending = str;
         }
     }
 
-    private void queue(String str)
+    private void queue( String str )
     {
-        if (str == null || str.length() == 0) return;
+        if ( str == null || str.length() == 0 ) return;
 
-        if (property != null)
+        if ( property != null )
         {
-            valueBuffer.add(str);
+            valueBuffer.add( str );
         }
         else
         {
-            buffer(str);
+            buffer( str );
         }
     }
 
     private void collapseValue()
     {
         StringBuilder sb = new StringBuilder();
-        for (String s : valueBuffer)
+        for ( String s : valueBuffer )
         {
-            sb.append(s);
+            sb.append( s );
         }
         String value = sb.toString();
 
-        if ("0 0".equals(value) || "0 0 0 0".equals(value) || "0 0 0".equals(value))
+        if ( "0 0".equals( value ) || "0 0 0 0".equals( value ) || "0 0 0".equals( value ) )
         {
-            if (DUAL_ZERO_PROPERTIES.contains(value))
+            if ( DUAL_ZERO_PROPERTIES.contains( value ) )
             {
-                buffer("0 0");
+                buffer( "0 0" );
             }
             else
             {
                 buffer("0");
             }
         }
-        else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)) && !noCollapseNone)
+        else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)) && options.shouldCollapseNone())
         {
             buffer("0");
         }
@@ -216,7 +210,7 @@ public class Parser implements TokenListener
 
     public void token(Token token, String value)
     {
-        if (debug) System.err.printf("Token: %s, value: %s\n", token, value);
+        if (options.isDebug()) System.err.printf("Token: %s, value: %s\n", token, value);
 
         if (rgb)
         {
@@ -416,7 +410,7 @@ public class Parser implements TokenListener
             }
             if (";".equals(pending))
             {
-                if (keepTailingSemicolons)
+                if (options.keepTailingSemicolons())
                 {
                     buffer(";");
                 }
@@ -451,7 +445,7 @@ public class Parser implements TokenListener
         }
         else if (NUMBER == token && value.startsWith("0."))
         {
-            if (noCollapseZeroes)
+            if (!options.shouldCollapseZeroes())
             {
                 queue( value );
             }
@@ -504,7 +498,7 @@ public class Parser implements TokenListener
                 }
             }
             // use 0 instead of none
-            else if (COLON == lastToken && "none".equals(value) && NONE_PROPERTIES.contains(property) && !noCollapseNone)
+            else if (COLON == lastToken && "none".equals(value) && NONE_PROPERTIES.contains(property) && options.shouldCollapseNone())
             {
                 queue("0");
             }

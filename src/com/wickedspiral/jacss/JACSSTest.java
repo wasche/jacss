@@ -60,7 +60,7 @@ public class JACSSTest
             {
                 throw new IllegalStateException( "Test result input is empty: " + resultFile.getName() );
             }
-            tests.add( new Object[]{ test, result } );
+            tests.add( new Object[]{ file.getName(), test, result } );
         }
     }
 
@@ -71,11 +71,11 @@ public class JACSSTest
     }
     
     @Test( dataProvider="files" )
-    public void testAll( String source, String expected ) throws FileNotFoundException
+    public void testAll( String name, String source, String expected ) throws FileNotFoundException
     {
         ByteArrayInputStream in = new ByteArrayInputStream( source.getBytes( UTF8 ) );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        new JACSS( in, out, new JACSS.CLI() ).run();
-        Assert.assertEquals( expected, out.toString() );
+        new JACSS( in, out, new Options() ).run();
+        Assert.assertEquals( out.toString(), expected, name );
     }
 }
