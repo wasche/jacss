@@ -435,7 +435,7 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                if ( RBRACE != lastToken )
+                if ( RBRACE != lastToken && COMMENT != lastToken )
                 {
                     queue(" ");
                 }
