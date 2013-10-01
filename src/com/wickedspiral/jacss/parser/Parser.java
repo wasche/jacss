@@ -187,7 +187,7 @@ public class Parser implements TokenListener
 
         if ( "0 0".equals( value ) || "0 0 0 0".equals( value ) || "0 0 0".equals( value ) )
         {
-            if ( DUAL_ZERO_PROPERTIES.contains( value ) )
+            if ( DUAL_ZERO_PROPERTIES.contains( property ) )
             {
                 buffer( "0 0" );
             }
@@ -445,13 +445,13 @@ public class Parser implements TokenListener
         }
         else if (NUMBER == token && value.startsWith("0."))
         {
-            if (!options.shouldCollapseZeroes())
+            if ( options.shouldCollapseZeroes() )
             {
-                queue( value );
+                queue(value.substring(1));
             }
             else
             {
-                queue(value.substring(1));
+                queue( value );
             }
         }
         else if (STRING == token && "-ms-filter".equals(property))
