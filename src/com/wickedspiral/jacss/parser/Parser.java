@@ -70,6 +70,7 @@ public class Parser implements TokenListener
     private boolean at;
     private boolean ie5mac;
     private boolean rgb;
+    private boolean rgba;
     private int     checkSpace;
 
     // other state
@@ -323,6 +324,15 @@ public class Parser implements TokenListener
             rgb = true;
             space = false;
             return;
+        }
+
+        if (IDENTIFIER == token && "rgba".equals(value))
+        {
+            rgba = true;
+        }
+        else if (RPAREN == token && rgba)
+        {
+            rgba = false;
         }
 
         if (AT == token)

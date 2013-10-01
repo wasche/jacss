@@ -24,7 +24,7 @@ public class Options
         usage = "Do not strip semicolons on last style of a rule" )
     protected boolean keepTailingSemicolons = false;
 
-    @Option( name = "--no-collapse-zeroes", required = false, usage = "Do not drop leading zero in floats less than 1" )
+    @Option( name = "--no-collapse-zeroes", required = false, usage = "Do not drop leading zeroes inside rgba()" )
     protected boolean noCollapseZeroes = false;
 
     @Option( name = "--no-collapse-none", required = false, usage = "Do not collapse none to 0" )
