@@ -13,7 +13,7 @@ import org.testng.ITestResult;
  */
 public class TestReporter implements ITestListener
 {
-    private static final Pattern ASSERT_EQ_PATTERN = Pattern.compile( "(.*) expected \\[(.*)\\] but found \\[(.*)\\]" );
+    private static final Pattern ASSERT_EQ_PATTERN = Pattern.compile( "(.*) expected \\[(.*)\\] but found \\[(.*)\\]", Pattern.MULTILINE | Pattern.DOTALL );
 
     @Override
     public void onFinish( ITestContext iTestContext )
@@ -41,12 +41,20 @@ public class TestReporter implements ITestListener
             if ( m.matches() )
             {
                 String test = m.group( 1 );
-                String expected = m.group( 2 );
-                String actual = m.group( 3 );
+                String expected = m.group( 2 ).replaceAll( "\n", "\\\\n" );
+                String actual = m.group( 3 ).replaceAll( "\n", "\\\\n" );
                 System.out.println( test );
                 System.out.println( "- " + expected );
                 System.out.println( "+ " + actual );
             }
+            else
+            {
+                System.out.println( "failed: " + throwable.getMessage() );
+            }
+        }
+        else
+        {
+            System.out.println( throwable.getClass().getSimpleName() + ": " + testResult.getParameters()[0] );
         }
     }
 

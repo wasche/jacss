@@ -19,7 +19,6 @@ import org.testng.annotations.*;
  * @author wasche
  * @since 9/30/13
  */
-@Listeners({ com.wickedspiral.jacss.TestReporter.class })
 public class JACSSTest
 {
     private static final String TEST_DIR = "tests";
