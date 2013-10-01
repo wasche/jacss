@@ -37,7 +37,7 @@ public class JACSS implements Runnable
         private static final int    NUM_THREADS = 1;
 
         @SuppressWarnings({ "MismatchedQueryAndUpdateOfCollection" })
-        @Argument(required = true, metaVar = "FILE", usage = "List of files to compress")
+        @Argument(required = false, metaVar = "FILE", usage = "List of files to compress")
         private List<File> files;
 
         @Option(name = "-r", aliases = { "--regex-from" }, required = false, metaVar = "REGEXFROM",
@@ -54,6 +54,9 @@ public class JACSS implements Runnable
 
         @Option(name = "-O", aliases = {"--stdout"}, required = false, usage = "Print to stdout instead of to file")
         private boolean stdout = false;
+        
+        @Option( name = "--help", usage = "Show this help text.")
+        private boolean help = false;
 
         public Pattern getFromPattern()
         {
@@ -110,7 +113,7 @@ public class JACSS implements Runnable
         shouldCompress = true;
     }
 
-    public JACSS( InputStream source, OutputStream target, Options options ) throws FileNotFoundException
+    public JACSS( InputStream source, OutputStream target, Options options )
     {
         this.sourceName = "<in>";
         this.targetName = "<out>";
@@ -164,6 +167,12 @@ public class JACSS implements Runnable
             parser.printUsage(System.err);
             System.exit(EXIT_STATUS_INVALID_ARG);
         }
+        if ( cli.help )
+        {
+            parser.printUsage( System.err );
+            System.exit( EXIT_STATUS_INVALID_ARG );
+        }
+        
         cli.imply();
 
         Pattern from = cli.getFromPattern();
@@ -171,27 +180,36 @@ public class JACSS implements Runnable
         if (cli.debug) System.err.println("Debug mode enabled.");
 
         ExecutorService pool = Executors.newFixedThreadPool(cli.numThreads);
-        for (File file : cli.files)
+        JACSS jacss;
+        
+        if ( null == cli.files || cli.files.isEmpty() )
         {
-            try
+            jacss = new JACSS( System.in, System.out, cli );
+            pool.submit( jacss );
+        }
+        else
+        {
+            for (File file : cli.files)
             {
-                JACSS jacss;
-                if ( cli.stdout )
+                try
                 {
-                    jacss = new JACSS( file, System.out, cli );
+                    if ( cli.stdout )
+                    {
+                        jacss = new JACSS( file, System.out, cli );
+                    }
+                    else
+                    {
+                        File f = new File( from.matcher(file.toString()).replaceAll(cli.regexTo) );
+                        jacss = new JACSS(file, f, cli);
+                    }
+                    pool.submit( jacss );
                 }
-                else
+                catch (FileNotFoundException e)
                 {
-                    File f = new File( from.matcher(file.toString()).replaceAll(cli.regexTo) );
-                    jacss = new JACSS(file, f, cli);
+                    System.err.println("Could not find file: " + e.getMessage());
+                    pool.shutdownNow();
+                    System.exit(EXIT_STATUS_INVALID_FILE);
                 }
-                pool.submit( jacss );
-            }
-            catch (FileNotFoundException e)
-            {
-                System.err.println("Could not find file: " + e.getMessage());
-                pool.shutdownNow();
-                System.exit(EXIT_STATUS_INVALID_FILE);
             }
         }
 
