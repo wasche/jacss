@@ -207,8 +207,8 @@ public class Parser implements TokenListener
                 String h = Integer.toHexString(Integer.parseInt(value)).toLowerCase();
                 if (h.length() < 2)
                 {
-                    rgbBuffer.add("0");
-                }
+                    h = "0" + h;
+            }
                 rgbBuffer.add(h);
             }
             else if (LPAREN == token)
@@ -524,6 +524,11 @@ public class Parser implements TokenListener
                 }
                 else
                 {
+                    if ( space && !BOUNDARY_OPS.contains( lastValue ) && BANG != token )
+                    {
+                        queue( " " );
+                    }
+
                     if (property == null || KEYWORDS.contains(v))
                     {
                         queue(v);
@@ -537,6 +542,11 @@ public class Parser implements TokenListener
             // nothing special, just send it along
             else
             {
+                if ( space && !BOUNDARY_OPS.contains( lastValue ) && BANG != token )
+                {
+                    queue( " " );
+                }
+
                 if (KEYWORDS.contains(v))
                 {
                     queue(v);
