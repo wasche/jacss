@@ -206,8 +206,8 @@ public class Parser implements TokenListener
                 String h = Integer.toHexString(Integer.parseInt(value)).toLowerCase();
                 if (h.length() < 2)
                 {
-                    rgbBuffer.add("0");
-                }
+                    h = "0" + h;
+            }
                 rgbBuffer.add(h);
             }
             else if (LPAREN == token)
