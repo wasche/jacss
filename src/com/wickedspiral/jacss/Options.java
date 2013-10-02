@@ -34,6 +34,9 @@ public class Options
     @Option( name = "--no-collapse-none", required = false, usage = "Do not collapse none to 0" )
     protected boolean noCollapseNone = false;
     
+    @Option( name = "--no-lowercasify-rgb", required = false, usage = "Do not lowercasify RGB hex constants" )
+    protected boolean noLowercasifyRgb = false;
+    
     @Option( name = "--compat-yui242", required = false, usage = "Match compatibility with YUI 2.4.2" )
     protected boolean yui242 = false;
 
@@ -45,6 +48,7 @@ public class Options
             addTrailingSemicolons = true;
             noCollapseZeroes = true;
             noCollapseNone = true;
+            noLowercasifyRgb = true;
         }
     }
     
@@ -57,10 +61,15 @@ public class Options
     {
         return !noCollapseNone;
     }
-
+    
     public boolean shouldCollapseZeroes()
     {
         return !noCollapseZeroes;
+    }
+
+    public boolean shouldLowercasifyRgb()
+    {
+        return !noLowercasifyRgb;
     }
 
     public boolean keepTailingSemicolons()
