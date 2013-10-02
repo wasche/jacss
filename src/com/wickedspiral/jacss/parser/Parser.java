@@ -22,6 +22,7 @@ public class Parser implements TokenListener
     private static final Joiner NULL_JOINER = Joiner.on( "" );
 
     private static final String             MS_ALPHA             = "progid:dximagetransform.microsoft.alpha(opacity=";
+    private static final String             MS_SHADOW            = "progid:dximagetransform.microsoft.shadow";
     private static final Collection<String> UNITS                = new HashSet<>(
         Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%" )
     );
@@ -467,7 +468,8 @@ public class Parser implements TokenListener
         }
         else if (STRING == token && "-ms-filter".equals(property))
         {
-            if (value.toLowerCase().startsWith(MS_ALPHA, 1))
+            String v = value.toLowerCase();
+            if (v.startsWith(MS_ALPHA, 1))
             {
                 String c = value.substring(0, 1);
                 String o = value.substring(MS_ALPHA.length()+1, value.length()-2);
@@ -476,6 +478,10 @@ public class Parser implements TokenListener
                 queue(o);
                 queue(")");
                 queue(c);
+            }
+            else if (v.startsWith(MS_SHADOW, 1))
+            {
+                queue(value.replaceAll(", +", ","));
             }
             else
             {
