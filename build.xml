@@ -57,13 +57,12 @@
         <delete dir="${reports}"/>
     </target>
 
-    <target name="test" description="run tests">
+    <target name="test" depends="build" description="run tests">
       <testng classpathref="testing.path"
               outputdir="${reports}"
               haltonfailure="true"
               listeners="com.wickedspiral.jacss.TestReporter">
         <classfileset dir="${build}" includes="**/JACSSTest.class"/>
-        <!--<reporter classname="com.wickedspiral.jacss.TestReporter"/>-->
       </testng>
     </target>
 
