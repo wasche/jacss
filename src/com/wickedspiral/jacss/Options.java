@@ -23,6 +23,10 @@ public class Options
     @Option( name = "--keep-trailing-semicolons", required = false,
         usage = "Do not strip semicolons on last style of a rule" )
     protected boolean keepTailingSemicolons = false;
+    
+    @Option( name = "--add-trailing-semicolons", required = false,
+        usage = "Add trailing semicolons on last style of a rule" )
+    protected boolean addTrailingSemicolons = false;
 
     @Option( name = "--no-collapse-zeroes", required = false, usage = "Do not drop leading zeroes inside rgba()" )
     protected boolean noCollapseZeroes = false;
@@ -38,6 +42,7 @@ public class Options
         if ( yui242 )
         {
             keepTailingSemicolons = true;
+            addTrailingSemicolons = true;
             noCollapseZeroes = true;
             noCollapseNone = true;
         }
@@ -60,6 +65,11 @@ public class Options
 
     public boolean keepTailingSemicolons()
     {
-        return keepTailingSemicolons;
+        return keepTailingSemicolons || addTrailingSemicolons;
+    }
+    
+    public boolean addTrailingSemicolons()
+    {
+        return addTrailingSemicolons;
     }
 }

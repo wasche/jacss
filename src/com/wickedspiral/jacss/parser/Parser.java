@@ -426,6 +426,10 @@ public class Parser implements TokenListener
                 }
                 pending = value;
             }
+            else if (options.addTrailingSemicolons()) // Fix #19
+            {
+                buffer(";" + value);
+            }
             else
             {
                 buffer(value);
