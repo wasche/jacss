@@ -130,7 +130,7 @@ public class Parser implements TokenListener
         if ( "}".equals( str ) )
         {
             // check for empty rule
-            if ( !ruleBuffer.isEmpty() && !"{".equals( ruleBuffer.getLast() ) )
+            if ( ruleBuffer.size() >= 2 && !"{".equals( ruleBuffer.get( ruleBuffer.size() - 2 ) ) )
             {
                 output( ruleBuffer );
             }
