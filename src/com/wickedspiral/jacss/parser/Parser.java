@@ -1,5 +1,6 @@
 package com.wickedspiral.jacss.parser;
 
+import com.google.common.base.Joiner;
 import com.wickedspiral.jacss.Options;
 import com.wickedspiral.jacss.lexer.Token;
 import com.wickedspiral.jacss.lexer.TokenListener;
@@ -10,22 +11,7 @@ import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
 
-import static com.wickedspiral.jacss.lexer.Token.AT;
-import static com.wickedspiral.jacss.lexer.Token.COLON;
-import static com.wickedspiral.jacss.lexer.Token.COMMENT;
-import static com.wickedspiral.jacss.lexer.Token.EQUALS;
-import static com.wickedspiral.jacss.lexer.Token.GT;
-import static com.wickedspiral.jacss.lexer.Token.HASH;
-import static com.wickedspiral.jacss.lexer.Token.IDENTIFIER;
-import static com.wickedspiral.jacss.lexer.Token.LBRACE;
-import static com.wickedspiral.jacss.lexer.Token.LPAREN;
-import static com.wickedspiral.jacss.lexer.Token.NUMBER;
-import static com.wickedspiral.jacss.lexer.Token.PERCENT;
-import static com.wickedspiral.jacss.lexer.Token.RBRACE;
-import static com.wickedspiral.jacss.lexer.Token.RPAREN;
-import static com.wickedspiral.jacss.lexer.Token.SEMICOLON;
-import static com.wickedspiral.jacss.lexer.Token.STRING;
-import static com.wickedspiral.jacss.lexer.Token.WHITESPACE;
+import static com.wickedspiral.jacss.lexer.Token.*;
 
 /**
  * @author wasche
@@ -33,26 +19,32 @@ import static com.wickedspiral.jacss.lexer.Token.WHITESPACE;
  */
 public class Parser implements TokenListener
 {
-    private static final String MS_ALPHA = "progid:dximagetransform.microsoft.alpha(opacity=";
-    private static final Collection<String> UNITS = new HashSet<>(
-            Arrays.asList("px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%"));
-    private static final Collection<String> KEYWORDS = new HashSet<>(
-            Arrays.asList("normal", "bold", "italic", "serif", "sans-serif", "fixed"));
-    private static final Collection<String> BOUNDARY_OPS = new HashSet<>(
-            Arrays.asList("{", "}", ">", ";", ":", ",")); // or comment
+    private static final Joiner NULL_JOINER = Joiner.on( "" );
+
+    private static final String             MS_ALPHA             = "progid:dximagetransform.microsoft.alpha(opacity=";
+    private static final Collection<String> UNITS                = new HashSet<>(
+        Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%" )
+    );
+    private static final Collection<String> KEYWORDS             = new HashSet<>(
+        Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
+    );
+    private static final Collection<String> BOUNDARY_OPS         = new HashSet<>(
+        Arrays.asList( "{", "}", ">", ";", ":", "," )
+    ); // or comment
     private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<>(
-            Arrays.asList("background-position", "-webkit-transform-origin", "-moz-transform-origin"));
-    private static final Collection<String> NONE_PROPERTIES = new HashSet<>();
+        Arrays.asList( "background-position", "-webkit-transform-origin", "-moz-transform-origin" )
+    );
+    private static final Collection<String> NONE_PROPERTIES      = new HashSet<>();
 
     static
     {
-        NONE_PROPERTIES.add("outline");
-        for (String property : new String[] {"border", "margin", "padding"})
+        NONE_PROPERTIES.add( "outline" );
+        for ( String property : new String[]{ "border", "margin", "padding" } )
         {
-            NONE_PROPERTIES.add(property);
-            for (String edge : new String[]{"top", "left", "bottom", "right"})
+            NONE_PROPERTIES.add( property );
+            for ( String edge : new String[]{ "top", "left", "bottom", "right" } )
             {
-                NONE_PROPERTIES.add(property + "-" + edge);
+                NONE_PROPERTIES.add( property + "-" + edge );
             }
         }
     }
@@ -121,6 +113,7 @@ public class Parser implements TokenListener
         ruleBuffer.add( str );
         output( ruleBuffer );
         ruleBuffer.clear();
+        pending = null;
     }
 
     private void write( String str )
@@ -176,12 +169,8 @@ public class Parser implements TokenListener
 
     private void collapseValue()
     {
-        StringBuilder sb = new StringBuilder();
-        for ( String s : valueBuffer )
-        {
-            sb.append( s );
-        }
-        String value = sb.toString();
+        String value = NULL_JOINER.join( valueBuffer );
+        valueBuffer.clear();
 
         if ( "0 0".equals( value ) || "0 0 0 0".equals( value ) || "0 0 0".equals( value ) )
         {
@@ -386,7 +375,6 @@ public class Parser implements TokenListener
             {
                 at = false;
                 dump(value);
-                pending = null;
             }
             else
             {
@@ -433,7 +421,7 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                if ( RBRACE != lastToken && COMMENT != lastToken )
+                if ( RBRACE != lastToken && COMMENT != lastToken && lastToken != LBRACE && lastToken != COLON && lastToken != SEMICOLON && lastToken != COMMA )
                 {
                     queue(" ");
                 }
