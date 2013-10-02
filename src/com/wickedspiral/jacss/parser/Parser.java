@@ -465,7 +465,8 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                if ( COMMENT != lastToken && !BOUNDARY_OPS.contains( lastValue ) )
+                if (COMMENT != lastToken && 
+                     !BOUNDARY_OPS.contains( lastValue ) && !BOUNDARY_OPS.contains(value))
                 {
                     space(true, "needs comment");
                 }
