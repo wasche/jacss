@@ -26,7 +26,7 @@ public class Parser implements TokenListener
     private static final Collection<String> UNITS                = new HashSet<>(
         Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%" )
     );
-    private static final Collection<String> KEYWORDS             = new HashSet<>(
+    private final Collection<String> KEYWORDS             = new HashSet<>(
         Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
     );
     private static final Collection<String> BOUNDARY_OPS         = new HashSet<>(
@@ -93,6 +93,11 @@ public class Parser implements TokenListener
         checkSpace = -1;
 
         this.options = options;
+        
+        if (! options.shouldLowercasifyKeywords())
+        {
+            KEYWORDS.remove("sans-serif"); // Fix #25
+        }
     }
 
     // ++ Output functions

@@ -40,6 +40,9 @@ public class Options
     // This is too silly to be a public option; fix #24.
     protected boolean keepUnitsInColorStop = false;
     
+    // This is too silly to be a public option; fix #25.
+    protected boolean noLowercasifyKeywords = false;
+    
     @Option( name = "--compat-yui242", required = false, usage = "Match compatibility with YUI 2.4.2" )
     protected boolean yui242 = false;
 
@@ -52,6 +55,7 @@ public class Options
             noCollapseZeroes = true;
             noCollapseNone = true;
             noLowercasifyRgb = true;
+            noLowercasifyKeywords = true;
             keepUnitsInColorStop = true;
         }
     }
@@ -74,6 +78,11 @@ public class Options
     public boolean shouldLowercasifyRgb()
     {
         return !noLowercasifyRgb;
+    }
+
+    public boolean shouldLowercasifyKeywords()
+    {
+        return !noLowercasifyKeywords;
     }
 
     public boolean keepTailingSemicolons()
