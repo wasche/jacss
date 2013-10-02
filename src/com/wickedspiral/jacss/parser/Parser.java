@@ -197,7 +197,7 @@ public class Parser implements TokenListener
 
     public void token(Token token, String value)
     {
-        if (options.isDebug()) System.err.printf("Token: %s, value: %s\n", token, value);
+        if (options.isDebug()) System.err.printf("Token: %s, value: %s, space? %b, in rule? %b\n", token, value, space, inRule);
 
         if (rgb)
         {
@@ -289,7 +289,7 @@ public class Parser implements TokenListener
 
         // make sure we have space between values for multi-value properties
         // margin: 5px 5px
-        if (
+        if ( inRule && (
                 (
                         NUMBER == lastToken &&
                         (HASH == token || NUMBER == token)
@@ -298,7 +298,7 @@ public class Parser implements TokenListener
                         (IDENTIFIER == lastToken || PERCENT == lastToken || RPAREN == lastToken) &&
                         (NUMBER == token || IDENTIFIER == token || HASH == token)
                 )
-        )
+        ))
         {
             queue(" ");
             space = false;
@@ -411,7 +411,7 @@ public class Parser implements TokenListener
         }
         else if (!inRule)
         {
-            if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains(value))
+            if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains( lastValue ))
             {
                 queue(value);
             }
@@ -421,7 +421,7 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                if ( RBRACE != lastToken && COMMENT != lastToken && lastToken != LBRACE && lastToken != COLON && lastToken != SEMICOLON && lastToken != COMMA )
+                if ( COMMENT != lastToken && !BOUNDARY_OPS.contains( lastValue ) )
                 {
                     queue(" ");
                 }
