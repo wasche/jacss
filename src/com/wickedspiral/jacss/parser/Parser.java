@@ -130,20 +130,18 @@ public class Parser implements TokenListener
         if ( str.startsWith( "/*!" ) && ruleBuffer.isEmpty() )
         {
             output( str );
+            return;
         }
+        ruleBuffer.add( str );
+
         if ( "}".equals( str ) )
         {
             // check for empty rule
             if ( !ruleBuffer.isEmpty() && !"{".equals( ruleBuffer.getLast() ) )
             {
                 output( ruleBuffer );
-                output( str );
             }
             ruleBuffer.clear();
-        }
-        else
-        {
-            ruleBuffer.add( str );
         }
     }
 
