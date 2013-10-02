@@ -30,7 +30,7 @@ public class Parser implements TokenListener
         Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
     );
     private static final Collection<String> BOUNDARY_OPS         = new HashSet<>(
-        Arrays.asList( "{", "}", ">", ";", ":", "," )
+        Arrays.asList( "{", "}", "(", ")", ">", ";", ":", "," )
     ); // or comment
     private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<>(
         Arrays.asList( "background-position", "-webkit-transform-origin", "-moz-transform-origin" )
@@ -201,6 +201,19 @@ public class Parser implements TokenListener
         }
     }
 
+    private void space(boolean emit, String reason)
+    {
+        if (emit)
+        {
+            queue(" ");
+            if (options.isDebug()) System.err.println("Emit space because: " + reason);
+        }
+        else
+        {
+            if (options.isDebug()) System.err.println("Hide space because: " + reason);
+        }
+    }
+    
     // ++ TokenListener
 
     public void token(Token token, String value)
@@ -222,7 +235,7 @@ public class Parser implements TokenListener
             {
                 if (NUMBER == lastToken)
                 {
-                    queue(" ");
+                    space(true, "RGB value separator");
                 }
                 queue("#");
                 rgbBuffer.clear();
@@ -308,7 +321,7 @@ public class Parser implements TokenListener
                 )
         ))
         {
-            queue(" ");
+            space(true, "multi-value property separator");
             space = false;
         }
 
@@ -354,7 +367,7 @@ public class Parser implements TokenListener
         else if (!inRule && COLON == lastToken && ("first-letter".equals(value) || "first-line".equals(value)))
         {
             queue(value);
-            queue(" ");
+            space(true, "first-letter or first-line");
         }
         else if (SEMICOLON == token)
         {
@@ -454,7 +467,7 @@ public class Parser implements TokenListener
                 }
                 if ( COMMENT != lastToken && !BOUNDARY_OPS.contains( lastValue ) )
                 {
-                    queue(" ");
+                    space(true, "needs comment");
                 }
                 queue(value);
                 space = false;
@@ -519,7 +532,7 @@ public class Parser implements TokenListener
                 }
                 else if (!UNITS.contains(value))
                 {
-                    queue(" ");
+                    space(true, "0 unknown units");
                     queue(value);
                 }
             }
@@ -557,7 +570,7 @@ public class Parser implements TokenListener
                 {
                     if ( space && !BOUNDARY_OPS.contains( lastValue ) && BANG != token )
                     {
-                        queue( " " );
+                        space(true, "need comment");
                     }
 
                     if (property == null || KEYWORDS.contains(v))
@@ -573,9 +586,10 @@ public class Parser implements TokenListener
             // nothing special, just send it along
             else
             {
-                if ( space && !BOUNDARY_OPS.contains( lastValue ) && BANG != token )
+                if ( space && BANG != token &&
+                     !BOUNDARY_OPS.contains(value) && !BOUNDARY_OPS.contains(lastValue))
                 {
-                    queue( " " );
+                    space(true, "between token and non-boundary op");
                 }
 
                 if (KEYWORDS.contains(v))
