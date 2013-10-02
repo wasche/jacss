@@ -37,6 +37,9 @@ public class Options
     @Option( name = "--no-lowercasify-rgb", required = false, usage = "Do not lowercasify RGB hex constants" )
     protected boolean noLowercasifyRgb = false;
     
+    // This is too silly to be a public option; fix #24.
+    protected boolean keepUnitsInColorStop = false;
+    
     @Option( name = "--compat-yui242", required = false, usage = "Match compatibility with YUI 2.4.2" )
     protected boolean yui242 = false;
 
@@ -49,6 +52,7 @@ public class Options
             noCollapseZeroes = true;
             noCollapseNone = true;
             noLowercasifyRgb = true;
+            keepUnitsInColorStop = true;
         }
     }
     
@@ -80,5 +84,10 @@ public class Options
     public boolean addTrailingSemicolons()
     {
         return addTrailingSemicolons;
+    }
+    
+    public boolean keepUnitsInColorStop()
+    {
+        return keepUnitsInColorStop;
     }
 }

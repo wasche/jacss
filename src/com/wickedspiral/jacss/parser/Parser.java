@@ -63,6 +63,7 @@ public class Parser implements TokenListener
     private boolean ie5mac;
     private boolean rgb;
     private boolean rgba;
+    private boolean colorStop;
     private int     checkSpace;
 
     // other state
@@ -321,6 +322,16 @@ public class Parser implements TokenListener
         {
             rgba = false;
         }
+        
+        // Fix #24, YUI color-stop() weirdness
+        if (LPAREN == token && "color-stop".equals(lastValue))
+        {
+            colorStop = true;
+        }
+        else if (RPAREN == token && colorStop)
+        {
+            colorStop = false;
+        }
 
         if (AT == token)
         {
@@ -445,7 +456,7 @@ public class Parser implements TokenListener
         }
         else if (NUMBER == token && value.startsWith("0."))
         {
-            if ( options.shouldCollapseZeroes() )
+            if ( options.shouldCollapseZeroes() || !rgba )
             {
                 queue(value.substring(1));
             }
@@ -491,7 +502,11 @@ public class Parser implements TokenListener
             // values of 0 don't need a unit
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
-                if (!UNITS.contains(value))
+                if (PERCENT == token && colorStop && options.keepUnitsInColorStop())
+                {
+                    queue("%");
+                }
+                else if (!UNITS.contains(value))
                 {
                     queue(" ");
                     queue(value);
@@ -508,10 +523,15 @@ public class Parser implements TokenListener
                 // #aabbcc
                 if (HASH == lastToken)
                 {
-                    if (value.length() == 6 &&
-                            v.charAt(0) == v.charAt(1) &&
-                            v.charAt(2) == v.charAt(3) &&
-                            v.charAt(4) == v.charAt(5))
+                    boolean eq = value.length() == 6 &&
+                                    v.charAt(0) == v.charAt(1) &&
+                                    v.charAt(2) == v.charAt(3) &&
+                                    v.charAt(4) == v.charAt(5);
+                    if (!options.shouldLowercasifyRgb())
+                    {
+                        v = value;
+                    }
+                    if (eq)
                     {
                         queue(v.substring(0, 1));
                         queue(v.substring(2, 3));
