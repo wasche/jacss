@@ -13,7 +13,7 @@ public class NumberTokenBuilder implements TokenBuilder
 {
     public void handle(ParserState state, char c) throws UnrecognizedCharacterException
     {
-        boolean nonDigit = ! Character.isDigit(c);
+        boolean nonDigit = !Character.isDigit(c);
         boolean point = ('.' == state.getLastCharacter());
 
         // .2em or .classname ?
@@ -21,15 +21,15 @@ public class NumberTokenBuilder implements TokenBuilder
         {
             state.tokenFinished(Token.OP)
                  .unsetTokenBuilder()
-                 .tokenize(c);
+                 .tokenize( c );
         }
         // -2px or -moz-something
-        else if (nonDigit && '-' == state.getLastCharacter())
+        else if (nonDigit && '-' == state.getLastCharacter() && c != '.')
         {
             state.setTokenBuilder(Token.IDENTIFIER)
                  .tokenize(c);
         }
-        else if (!nonDigit || (!point && ('.' == c ||  '-' == c)))
+        else if ( !nonDigit || (('.' == c || '-' == c)) )
         {
             state.push(c);
         }
