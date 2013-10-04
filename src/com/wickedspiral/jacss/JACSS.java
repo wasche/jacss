@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
  */
 public class JACSS implements Runnable
 {
+    private static final String VERSION = JACSS.class.getPackage().getImplementationVersion();
 
     private static class CLI extends Options
     {
@@ -57,6 +58,9 @@ public class JACSS implements Runnable
         
         @Option( name = "--help", usage = "Show this help text.")
         private boolean help = false;
+        
+        @Option( name = "--version", usage = "Show version information.")
+        private boolean version = false;
 
         public Pattern getFromPattern()
         {
@@ -170,7 +174,12 @@ public class JACSS implements Runnable
         if ( cli.help )
         {
             parser.printUsage( System.err );
-            System.exit( EXIT_STATUS_INVALID_ARG );
+            System.exit( 0 );
+        }
+        if ( cli.version )
+        {
+            System.err.println( "JACSS, version " + VERSION );
+            System.exit( 0 );
         }
         
         cli.imply();

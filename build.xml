@@ -2,6 +2,8 @@
     <description>
         main build file for JACSS
     </description>
+  
+  <property file="build.properties"/>
 
     <property name="lib" location="lib"/>
     <property name="src" location="src"/>
@@ -31,23 +33,31 @@
     </target>
 
     <target name="build" depends="init" description="compile the source">
-        <javac srcdir="${src}" destdir="${build}">
+        <javac srcdir="${src}" destdir="${build}" debug="true">
             <classpath refid="project.class.path"/>
         </javac>
     </target>
 
     <target name="dist" depends="build" description="generate the distribution">
-        <mkdir dir="${dist}/lib"/>
-        <jar jarfile="${dist}/lib/jacss-no-deps.jar" basedir="${build}">
-            <manifest>
-                <attribute name="Main-Class" value="com.wickedspiral.jacss.JACSS"/>
-            </manifest>
+      <buildnumber file="build.num"/>
+        <mkdir dir="${dist}"/>
+        <jar jarfile="${dist}/jacss-${version}-${build.number}-no-deps.jar"
+             basedir="${build}"
+             excludes="**/*Test,**/Test*">
+          <manifest>
+            <attribute name="Main-Class" value="com.wickedspiral.jacss.JACSS"/>
+            <attribute name="Implementation-Version" value="${version}-${build.number}"/>
+          </manifest>
         </jar>
-        <jar jarfile="${dist}/lib/jacss.jar" basedir="${build}">
-            <zipfileset includes="**/*.class" src="${lib}/args4j-2.0.17.jar"/>
-            <manifest>
-                <attribute name="Main-Class" value="com.wickedspiral.jacss.JACSS"/>
-            </manifest>
+        <jar jarfile="${dist}/jacss-${version}-${build.number}.jar"
+             basedir="${build}"
+             excludes="**/*Test,**/Test*">
+          <zipfileset includes="**/*.class" src="${lib}/args4j-2.0.17.jar"/>
+          <zipfileset includes="**/*.class" src="${lib}/guava-15.0.jar"/>
+          <manifest>
+            <attribute name="Main-Class" value="com.wickedspiral.jacss.JACSS"/>
+            <attribute name="Implementation-Version" value="${version}-${build.number}"/>
+          </manifest>
         </jar>
     </target>
 
