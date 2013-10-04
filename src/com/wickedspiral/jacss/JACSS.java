@@ -92,8 +92,8 @@ public class JACSS implements Runnable
 
         shouldCompress = options.force || !(from.exists() && from.lastModified() >= file.lastModified());
 
-        source = new FileInputStream( file );
-        target = new FileOutputStream( from );
+        source = shouldCompress ? new FileInputStream( file ) : null;
+        target = shouldCompress ? new FileOutputStream( from ) : null;
     }
     
     public JACSS( File source, OutputStream target, Options options ) throws FileNotFoundException
