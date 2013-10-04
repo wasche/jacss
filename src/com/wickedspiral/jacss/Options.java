@@ -8,16 +8,13 @@ import org.kohsuke.args4j.Option;
 */
 public class Options
 {
-    @Option( name = "-v", aliases = { "--verbose" }, required = false, metaVar = "VERBOSE",
-        usage = "Print debugging information" )
+    @Option( name = "-v", aliases = { "--verbose" }, required = false, usage = "Print debugging information" )
     protected boolean verbose = false;
 
-    @Option( name = "-d", aliases = { "--debug" }, required = false, metaVar = "DEBUG",
-        usage = "Print additional debugging information" )
+    @Option( name = "-d", aliases = { "--debug" }, required = false, usage = "Print additional debugging information" )
     protected boolean debug = false;
 
-    @Option( name = "-f", aliases = { "--force" }, required = false, metaVar = "FORCE",
-        usage = "Force re-compression" )
+    @Option( name = "-f", aliases = { "--force" }, required = false, usage = "Force re-compression" )
     protected boolean force = false;
 
     @Option( name = "--keep-trailing-semicolons", required = false,

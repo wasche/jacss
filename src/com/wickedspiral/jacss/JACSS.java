@@ -38,7 +38,7 @@ public class JACSS implements Runnable
         private static final int    NUM_THREADS = 1;
 
         @SuppressWarnings({ "MismatchedQueryAndUpdateOfCollection" })
-        @Argument(required = false, metaVar = "FILE", usage = "List of files to compress")
+        @Argument(required = false, usage = "List of files to compress")
         private List<File> files;
 
         @Option(name = "-r", aliases = { "--regex-from" }, required = false, metaVar = "REGEXFROM",
@@ -173,6 +173,8 @@ public class JACSS implements Runnable
         }
         if ( cli.help )
         {
+            System.err.println( "Usage: java -jar JACSS-<version>.jar [options] [files]\n" );
+            System.err.println( "Options:\n" );
             parser.printUsage( System.err );
             System.exit( 0 );
         }
