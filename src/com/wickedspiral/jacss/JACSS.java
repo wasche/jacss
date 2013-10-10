@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
  */
 public class JACSS implements Runnable
 {
+    private static final String VERSION = JACSS.class.getPackage().getImplementationVersion();
 
     private static class CLI extends Options
     {
@@ -37,7 +38,7 @@ public class JACSS implements Runnable
         private static final int    NUM_THREADS = 1;
 
         @SuppressWarnings({ "MismatchedQueryAndUpdateOfCollection" })
-        @Argument(required = false, metaVar = "FILE", usage = "List of files to compress")
+        @Argument(required = false, usage = "List of files to compress")
         private List<File> files;
 
         @Option(name = "-r", aliases = { "--regex-from" }, required = false, metaVar = "REGEXFROM",
@@ -57,6 +58,9 @@ public class JACSS implements Runnable
         
         @Option( name = "--help", usage = "Show this help text.")
         private boolean help = false;
+        
+        @Option( name = "--version", usage = "Show version information.")
+        private boolean version = false;
 
         public Pattern getFromPattern()
         {
@@ -92,8 +96,8 @@ public class JACSS implements Runnable
 
         shouldCompress = options.force || !(from.exists() && from.lastModified() >= file.lastModified());
 
-        source = new FileInputStream( file );
-        target = new FileOutputStream( from );
+        source = shouldCompress ? new FileInputStream( file ) : null;
+        target = shouldCompress ? new FileOutputStream( from ) : null;
     }
     
     public JACSS( File source, OutputStream target, Options options ) throws FileNotFoundException
@@ -169,8 +173,15 @@ public class JACSS implements Runnable
         }
         if ( cli.help )
         {
+            System.err.println( "Usage: java -jar JACSS-<version>.jar [options] [files]\n" );
+            System.err.println( "Options:\n" );
             parser.printUsage( System.err );
-            System.exit( EXIT_STATUS_INVALID_ARG );
+            System.exit( 0 );
+        }
+        if ( cli.version )
+        {
+            System.err.println( "JACSS, version " + VERSION );
+            System.exit( 0 );
         }
         
         cli.imply();

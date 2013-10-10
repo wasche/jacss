@@ -293,7 +293,13 @@ public class Parser implements TokenListener
             }
             else if (ie5mac)
             {
-                queue("/**/");
+                // if the rule buffer starts with the opening ie5/mac comment hack,
+                // and the rest of the buffer + pending would collapse to nothing,
+                // suppress the hack comments
+                if ( ruleBuffer.size() >= 2 && "}".equals( pending ) && !"{".equals( ruleBuffer.get( ruleBuffer.size() - 1 ) ) )
+                {
+                    queue("/**/");
+                }
                 lastToken = token;
                 lastValue = value;
                 ie5mac = false;
