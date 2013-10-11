@@ -471,8 +471,8 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                if (COMMENT != lastToken && 
-                     !BOUNDARY_OPS.contains( lastValue ) && !BOUNDARY_OPS.contains(value))
+                if (COMMENT != lastToken && !BOUNDARY_OPS.contains( lastValue ) && 
+                        (!BOUNDARY_OPS.contains(value) || COLON == token))
                 {
                     space(true, "needs comment");
                 }
@@ -593,8 +593,7 @@ public class Parser implements TokenListener
             // nothing special, just send it along
             else
             {
-                if ( space && BANG != token &&
-                     !BOUNDARY_OPS.contains(value) && !BOUNDARY_OPS.contains(lastValue))
+                if ( space && BANG != token && !BOUNDARY_OPS.contains(value) && !BOUNDARY_OPS.contains(lastValue))
                 {
                     space(true, "between token and non-boundary op");
                 }
