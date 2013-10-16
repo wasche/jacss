@@ -22,14 +22,15 @@ public class Parser implements TokenListener
     private static final Joiner NULL_JOINER = Joiner.on( "" );
 
     private static final String             MS_ALPHA             = "progid:dximagetransform.microsoft.alpha(opacity=";
+    private static final String             MS_SHADOW            = "progid:dximagetransform.microsoft.shadow";
     private static final Collection<String> UNITS                = new HashSet<>(
         Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%" )
     );
-    private static final Collection<String> KEYWORDS             = new HashSet<>(
+    private final Collection<String> KEYWORDS             = new HashSet<>(
         Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
     );
     private static final Collection<String> BOUNDARY_OPS         = new HashSet<>(
-        Arrays.asList( "{", "}", ">", ";", ":", "," )
+        Arrays.asList( "{", "}", "(", ")", ">", ";", ":", "," )
     ); // or comment
     private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<>(
         Arrays.asList( "background-position", "-webkit-transform-origin", "-moz-transform-origin" )
@@ -62,6 +63,8 @@ public class Parser implements TokenListener
     private boolean at;
     private boolean ie5mac;
     private boolean rgb;
+    private boolean rgba;
+    private boolean colorStop;
     private int     checkSpace;
 
     // other state
@@ -90,6 +93,11 @@ public class Parser implements TokenListener
         checkSpace = -1;
 
         this.options = options;
+        
+        if (! options.shouldLowercasifyKeywords())
+        {
+            KEYWORDS.remove("sans-serif"); // Fix #25
+        }
     }
 
     // ++ Output functions
@@ -193,6 +201,19 @@ public class Parser implements TokenListener
         }
     }
 
+    private void space(boolean emit, String reason)
+    {
+        if (emit)
+        {
+            queue(" ");
+            if (options.isDebug()) System.err.println("Emit space because: " + reason);
+        }
+        else
+        {
+            if (options.isDebug()) System.err.println("Hide space because: " + reason);
+        }
+    }
+    
     // ++ TokenListener
 
     public void token(Token token, String value)
@@ -214,7 +235,7 @@ public class Parser implements TokenListener
             {
                 if (NUMBER == lastToken)
                 {
-                    queue(" ");
+                    space(true, "RGB value separator");
                 }
                 queue("#");
                 rgbBuffer.clear();
@@ -306,7 +327,7 @@ public class Parser implements TokenListener
                 )
         ))
         {
-            queue(" ");
+            space(true, "multi-value property separator");
             space = false;
         }
 
@@ -316,6 +337,25 @@ public class Parser implements TokenListener
             rgb = true;
             space = false;
             return;
+        }
+
+        if (IDENTIFIER == token && "rgba".equals(value))
+        {
+            rgba = true;
+        }
+        else if (RPAREN == token && rgba)
+        {
+            rgba = false;
+        }
+        
+        // Fix #24, YUI color-stop() weirdness
+        if (LPAREN == token && "color-stop".equals(lastValue))
+        {
+            colorStop = true;
+        }
+        else if (RPAREN == token && colorStop)
+        {
+            colorStop = false;
         }
 
         if (AT == token)
@@ -333,7 +373,7 @@ public class Parser implements TokenListener
         else if (!inRule && COLON == lastToken && ("first-letter".equals(value) || "first-line".equals(value)))
         {
             queue(value);
-            queue(" ");
+            space(true, "first-letter or first-line");
         }
         else if (SEMICOLON == token)
         {
@@ -408,6 +448,10 @@ public class Parser implements TokenListener
                 }
                 pending = value;
             }
+            else if (options.addTrailingSemicolons()) // Fix #19
+            {
+                buffer(";" + value);
+            }
             else
             {
                 buffer(value);
@@ -427,9 +471,10 @@ public class Parser implements TokenListener
                 {
                     checkSpace = ruleBuffer.size() + 1; // include pending value
                 }
-                if ( COMMENT != lastToken && !BOUNDARY_OPS.contains( lastValue ) )
+                if (COMMENT != lastToken && !BOUNDARY_OPS.contains( lastValue ) && 
+                        (!BOUNDARY_OPS.contains(value) || COLON == token))
                 {
-                    queue(" ");
+                    space(true, "needs comment");
                 }
                 queue(value);
                 space = false;
@@ -437,7 +482,7 @@ public class Parser implements TokenListener
         }
         else if (NUMBER == token && value.startsWith("0."))
         {
-            if ( options.shouldCollapseZeroes() )
+            if ( options.shouldCollapseZeroes() || !rgba )
             {
                 queue(value.substring(1));
             }
@@ -448,7 +493,8 @@ public class Parser implements TokenListener
         }
         else if (STRING == token && "-ms-filter".equals(property))
         {
-            if (value.toLowerCase().startsWith(MS_ALPHA, 1))
+            String v = value.toLowerCase();
+            if (v.startsWith(MS_ALPHA, 1))
             {
                 String c = value.substring(0, 1);
                 String o = value.substring(MS_ALPHA.length()+1, value.length()-2);
@@ -457,6 +503,10 @@ public class Parser implements TokenListener
                 queue(o);
                 queue(")");
                 queue(c);
+            }
+            else if (v.startsWith(MS_SHADOW, 1))
+            {
+                queue(value.replaceAll(", +", ","));
             }
             else
             {
@@ -483,9 +533,13 @@ public class Parser implements TokenListener
             // values of 0 don't need a unit
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
-                if (!UNITS.contains(value))
+                if (PERCENT == token && colorStop && options.keepUnitsInColorStop())
                 {
-                    queue(" ");
+                    queue("%");
+                }
+                else if (!UNITS.contains(value))
+                {
+                    space(true, "0 unknown units");
                     queue(value);
                 }
             }
@@ -500,10 +554,15 @@ public class Parser implements TokenListener
                 // #aabbcc
                 if (HASH == lastToken)
                 {
-                    if (value.length() == 6 &&
-                            v.charAt(0) == v.charAt(1) &&
-                            v.charAt(2) == v.charAt(3) &&
-                            v.charAt(4) == v.charAt(5))
+                    boolean eq = value.length() == 6 &&
+                                    v.charAt(0) == v.charAt(1) &&
+                                    v.charAt(2) == v.charAt(3) &&
+                                    v.charAt(4) == v.charAt(5);
+                    if (!options.shouldLowercasifyRgb())
+                    {
+                        v = value;
+                    }
+                    if (eq)
                     {
                         queue(v.substring(0, 1));
                         queue(v.substring(2, 3));
@@ -518,7 +577,7 @@ public class Parser implements TokenListener
                 {
                     if ( space && !BOUNDARY_OPS.contains( lastValue ) && BANG != token )
                     {
-                        queue( " " );
+                        space(true, "need comment");
                     }
 
                     if (property == null || KEYWORDS.contains(v))
@@ -534,9 +593,9 @@ public class Parser implements TokenListener
             // nothing special, just send it along
             else
             {
-                if ( space && !BOUNDARY_OPS.contains( lastValue ) && BANG != token )
+                if ( space && BANG != token && !BOUNDARY_OPS.contains(value) && !BOUNDARY_OPS.contains(lastValue))
                 {
-                    queue( " " );
+                    space(true, "between token and non-boundary op");
                 }
 
                 if (KEYWORDS.contains(v))
