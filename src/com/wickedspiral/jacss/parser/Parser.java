@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.regex.Pattern;
 
 import static com.wickedspiral.jacss.lexer.Token.*;
 
@@ -36,6 +37,10 @@ public class Parser implements TokenListener
         Arrays.asList( "background-position", "-webkit-transform-origin", "-moz-transform-origin" )
     );
     private static final Collection<String> NONE_PROPERTIES      = new HashSet<>();
+    
+    private static final Collection<Token> YUI_NO_SPACE_AFTER = new HashSet<>(
+        Arrays.asList(COMMA, LBRACE, RBRACE, COLON, SEMICOLON)
+    );
 
     static
     {
@@ -63,13 +68,16 @@ public class Parser implements TokenListener
     private boolean at;
     private boolean ie5mac;
     private boolean rgb;
-    private boolean rgba;
-    private boolean colorStop;
     private int     checkSpace;
+    
+    // "space" field, above, has weird semantics.  This is more authoritative: how many
+    // tokens ago was the last whitespace token.
+    private int sinceWhite = Integer.MAX_VALUE;
 
     // other state
     private String property;
     private Token  lastToken;
+    private Token  lastLastToken;
     private String lastValue;
 
     private final PrintStream out;
@@ -135,7 +143,7 @@ public class Parser implements TokenListener
         }
         ruleBuffer.add( str );
 
-        if ( "}".equals( str ) )
+        if ( "}".equals( str ) || ";}".equals( str ) )
         {
             // check for empty rule
             if ( ruleBuffer.size() < 2 || (ruleBuffer.size() >= 2 && !"{".equals( ruleBuffer.get( ruleBuffer.size() - 2 ) )) )
@@ -219,6 +227,15 @@ public class Parser implements TokenListener
     public void token(Token token, String value)
     {
         if (options.isDebug()) System.err.printf("Token: %s, value: %s, space? %b, in rule? %b\n", token, value, space, inRule);
+        
+        if (WHITESPACE == token)
+        {
+            sinceWhite = 0;
+        }
+        else
+        {
+            sinceWhite += 1;
+        }
 
         if (rgb)
         {
@@ -280,6 +297,7 @@ public class Parser implements TokenListener
             if ('!' == value.charAt(2))
             {
                 queue(value);
+                lastLastToken = lastToken;
                 lastToken = token;
                 lastValue = value;
             }
@@ -287,6 +305,7 @@ public class Parser implements TokenListener
             else if ('\\' == value.charAt(value.length()-3))
             {
                 queue("/*\\*/");
+                lastLastToken = lastToken;
                 lastToken = token;
                 lastValue = value;
                 ie5mac = true;
@@ -300,6 +319,7 @@ public class Parser implements TokenListener
                 {
                     queue("/**/");
                 }
+                lastLastToken = lastToken;
                 lastToken = token;
                 lastValue = value;
                 ie5mac = false;
@@ -308,6 +328,7 @@ public class Parser implements TokenListener
             else if (GT == lastToken)
             {
                 queue("/**/");
+                lastLastToken = lastToken;
                 lastToken = token;
                 lastValue = value;
             }
@@ -337,25 +358,6 @@ public class Parser implements TokenListener
             rgb = true;
             space = false;
             return;
-        }
-
-        if (IDENTIFIER == token && "rgba".equals(value))
-        {
-            rgba = true;
-        }
-        else if (RPAREN == token && rgba)
-        {
-            rgba = false;
-        }
-        
-        // Fix #24, YUI color-stop() weirdness
-        if (LPAREN == token && "color-stop".equals(lastValue))
-        {
-            colorStop = true;
-        }
-        else if (RPAREN == token && colorStop)
-        {
-            colorStop = false;
         }
 
         if (AT == token)
@@ -482,7 +484,8 @@ public class Parser implements TokenListener
         }
         else if (NUMBER == token && value.startsWith("0."))
         {
-            if ( options.shouldCollapseZeroes() || !rgba )
+            boolean okToCollapse = sinceWhite == 1 || COLON == lastToken;
+            if ( options.shouldCollapseZeroes() || okToCollapse )
             {
                 queue(value.substring(1));
             }
@@ -513,6 +516,10 @@ public class Parser implements TokenListener
                 queue(value);
             }
         }
+        else if (STRING == token && options.shouldCleanXmlStrings() && value.contains("svg+xml"))
+        {
+            queue(cleanXml(value));
+        }
         else if (EQUALS == token)
         {
             queue(value);
@@ -533,7 +540,20 @@ public class Parser implements TokenListener
             // values of 0 don't need a unit
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
-                if (PERCENT == token && colorStop && options.keepUnitsInColorStop())
+                // YUI only strips units if zero was preceded by colon or whitespace.  However
+                // it also strips whitespace following !{}:;>+([, before running that rule.
+                // So we have to be compatible with the bug. :-(
+                boolean stripIt = COLON == lastLastToken || 
+                    (sinceWhite == 2 && !YUI_NO_SPACE_AFTER.contains(lastLastToken));
+                if (options.isDebug())
+                {
+                    System.err.println("token= " + token + 
+                                       " last=" + lastToken +
+                                       " lastlast=" + lastLastToken +
+                                       " sinceWhite=" + sinceWhite +
+                                       " stripIt=" + stripIt);
+                }
+                if (PERCENT == token && options.keepUnitsWithZero() && !stripIt)
                 {
                     queue("%");
                 }
@@ -609,6 +629,7 @@ public class Parser implements TokenListener
             }
         }
 
+        lastLastToken = lastToken;
         lastToken = token;
         lastValue = value;
         space = false;
@@ -621,5 +642,19 @@ public class Parser implements TokenListener
         {
             output(ruleBuffer);
         }
+    }
+    
+    // Fix #32 -- some compression behavior gets indiscriminately applied to SVG strings.
+    
+    private final static Pattern multipleSpaces = Pattern.compile("\\s\\s\\s*");
+    private final static Pattern trailingSpace = Pattern.compile("([>,])\\s+");
+    private final static Pattern leadingZero = Pattern.compile("([ :])0\\.");
+    
+    private String cleanXml(String s)
+    {
+        s = multipleSpaces.matcher(s).replaceAll(" ");
+        s = trailingSpace.matcher(s).replaceAll("$1");
+        s = leadingZero.matcher(s).replaceAll("$1.");
+        return s;
     }
 }
