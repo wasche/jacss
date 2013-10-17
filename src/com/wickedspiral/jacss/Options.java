@@ -43,6 +43,9 @@ public class Options
     // Another private YUI option, fix #32
     protected boolean cleanXmlStrings = false;
     
+    // Yet another, fix #33
+    protected boolean compressMicrosoft = true;
+    
     @Option( name = "--compat-yui242", required = false, usage = "Match compatibility with YUI 2.4.2" )
     protected boolean yui242 = false;
 
@@ -58,6 +61,7 @@ public class Options
             noLowercasifyKeywords = true;
             keepUnitsWithZero = true;
             cleanXmlStrings = true;
+            compressMicrosoft = false;
         }
     }
     
@@ -75,10 +79,15 @@ public class Options
     {
         return !noCollapseZeroes;
     }
-
+    
     public boolean shouldLowercasifyRgb()
     {
         return !noLowercasifyRgb;
+    }
+
+    public boolean shouldCompressMicrosoft()
+    {
+        return compressMicrosoft;
     }
 
     public boolean shouldLowercasifyKeywords()

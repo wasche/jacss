@@ -25,7 +25,7 @@ public class Parser implements TokenListener
     private static final String             MS_ALPHA             = "progid:dximagetransform.microsoft.alpha(opacity=";
     private static final String             MS_SHADOW            = "progid:dximagetransform.microsoft.shadow";
     private static final Collection<String> UNITS                = new HashSet<>(
-        Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%" )
+        Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "deg", "s", "%" )
     );
     private final Collection<String> KEYWORDS             = new HashSet<>(
         Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
@@ -497,7 +497,7 @@ public class Parser implements TokenListener
         else if (STRING == token && "-ms-filter".equals(property))
         {
             String v = value.toLowerCase();
-            if (v.startsWith(MS_ALPHA, 1))
+            if (options.shouldCompressMicrosoft() && v.startsWith(MS_ALPHA, 1))
             {
                 String c = value.substring(0, 1);
                 String o = value.substring(MS_ALPHA.length()+1, value.length()-2);
@@ -507,7 +507,7 @@ public class Parser implements TokenListener
                 queue(")");
                 queue(c);
             }
-            else if (v.startsWith(MS_SHADOW, 1))
+            else if (options.shouldCompressMicrosoft() && v.startsWith(MS_SHADOW, 1))
             {
                 queue(value.replaceAll(", +", ","));
             }
@@ -528,7 +528,7 @@ public class Parser implements TokenListener
             {
                 sb.append(s);
             }
-            if (MS_ALPHA.equals(sb.toString().toLowerCase()))
+            if (options.shouldCompressMicrosoft() && MS_ALPHA.equals(sb.toString().toLowerCase()))
             {
                 buffer("alpha(opacity=");
                 valueBuffer.clear();
@@ -553,9 +553,13 @@ public class Parser implements TokenListener
                                        " sinceWhite=" + sinceWhite +
                                        " stripIt=" + stripIt);
                 }
-                if (PERCENT == token && options.keepUnitsWithZero() && !stripIt)
+                if (options.keepUnitsWithZero() && PERCENT == token && !stripIt)
                 {
                     queue("%");
+                }
+                else if (options.keepUnitsWithZero() && ("deg".equals(value) || "s".equals(value)))
+                {
+                    queue(value);
                 }
                 else if (!UNITS.contains(value))
                 {
