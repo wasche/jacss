@@ -633,6 +633,10 @@ public class Parser implements TokenListener
                 {
                     space(true, "between token and non-boundary op");
                 }
+                else if (space && QUESTION == token)
+                {
+                    space(true, "before question mark");
+                }
 
                 if (KEYWORDS.contains(v))
                 {
