@@ -381,9 +381,16 @@ public class Parser implements TokenListener
         {
             if (at)
             {
+                // means at-directive with no rule body
+                // (because seeing LBRACE sets at=false)
+                
                 at = false;
                 if ("charset".equals(ruleBuffer.get(1)))
                 {
+                    // e.g.
+                    // @charset "utf-8";
+                    // can only appear once
+                    
                     if (charset)
                     {
                         ruleBuffer.clear();
@@ -461,6 +468,7 @@ public class Parser implements TokenListener
             property = null;
             inRule = false;
         }
+        
         else if (!inRule)
         {
             if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains( lastValue ))
@@ -482,10 +490,15 @@ public class Parser implements TokenListener
                 space = false;
             }
         }
+        
+        // at this point we're in a rule body and looking at something that continues
+        // the current property value (the property name is set several steps above,
+        // when we see the COLON after it)
+        
         else if (NUMBER == token && value.startsWith("0."))
         {
-            boolean okToCollapse = sinceWhite == 1 || COLON == lastToken;
-            if ( options.shouldCollapseZeroes() || okToCollapse )
+            boolean yuiCanCollapse = sinceWhite == 1 || COLON == lastToken;
+            if ( options.shouldCollapseZeroes() || yuiCanCollapse )
             {
                 queue(value.substring(1));
             }
@@ -648,7 +661,7 @@ public class Parser implements TokenListener
         }
     }
     
-    // Fix #32 -- some compression behavior gets indiscriminately applied to SVG strings.
+    // Fix #32 -- YUI indiscriminately compresses some SVG content.
     
     private final static Pattern multipleSpaces = Pattern.compile("\\s\\s\\s*");
     private final static Pattern trailingSpace = Pattern.compile("([>,])\\s+");
