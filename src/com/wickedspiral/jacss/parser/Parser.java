@@ -1,3 +1,10 @@
+/*
+ * Portions of this code (specifically, regex-based hex constant compression) are
+ * Copyright (c) 2007, Yahoo! Inc. All rights reserved.
+ * Code licensed under the BSD License:
+ *     http://developer.yahoo.net/yui/license.txt
+ */
+
 package com.wickedspiral.jacss.parser;
 
 import com.google.common.base.Joiner;
@@ -10,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static com.wickedspiral.jacss.lexer.Token.*;
@@ -652,12 +660,31 @@ public class Parser implements TokenListener
     private final static Pattern multipleSpaces = Pattern.compile("\\s\\s\\s*");
     private final static Pattern trailingSpace = Pattern.compile("([>,])\\s+");
     private final static Pattern leadingZero = Pattern.compile("([ :])0\\.");
+    private final static Pattern hexString =
+        Pattern.compile("([^\"'=\\s])(\\s*)#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])");
+
     
     private String cleanXml(String s)
     {
         s = multipleSpaces.matcher(s).replaceAll(" ");
         s = trailingSpace.matcher(s).replaceAll("$1");
         s = leadingZero.matcher(s).replaceAll("$1.");
+        
+        Matcher m = hexString.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            // Test for AABBCC pattern
+            if (m.group(3).equalsIgnoreCase(m.group(4)) &&
+                    m.group(5).equalsIgnoreCase(m.group(6)) &&
+                    m.group(7).equalsIgnoreCase(m.group(8))) {
+                m.appendReplacement(sb, m.group(1) + m.group(2) + "#" + m.group(3) + m.group(5) + m.group(7));
+            } else {
+                m.appendReplacement(sb, m.group());
+            }
+        }
+        m.appendTail(sb);
+        s = sb.toString();
+        
         return s;
     }
 }
