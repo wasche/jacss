@@ -38,8 +38,12 @@ public class Parser implements TokenListener
     );
     private static final Collection<String> NONE_PROPERTIES      = new HashSet<>();
     
+    // YUI only strips units or leading zero if the zero was preceded by colon or whitespace.
+    // However it also strips whitespace following certain chars before doing that, causing
+    // the zero logic to break everywhere.  This list lets us be compatible with that bug. :-(
+    
     private static final Collection<Token> YUI_NO_SPACE_AFTER = new HashSet<>(
-        Arrays.asList(COMMA, LBRACE, RBRACE, COLON, SEMICOLON)
+        Arrays.asList(COMMA, LBRACE, RBRACE, COLON, SEMICOLON, LPAREN)
     );
 
     static
@@ -70,10 +74,6 @@ public class Parser implements TokenListener
     private boolean rgb;
     private int     checkSpace;
     
-    // "space" field, above, has weird semantics.  This is more authoritative: how many
-    // tokens ago was the last whitespace token.
-    private int sinceWhite = Integer.MAX_VALUE;
-
     // other state
     private String property;
     private Token  lastToken;
@@ -228,15 +228,6 @@ public class Parser implements TokenListener
     {
         if (options.isDebug()) System.err.printf("Token: %s, value: %s, space? %b, in rule? %b\n", token, value, space, inRule);
         
-        if (WHITESPACE == token)
-        {
-            sinceWhite = 0;
-        }
-        else
-        {
-            sinceWhite += 1;
-        }
-
         if (rgb)
         {
             if (NUMBER == token)
@@ -497,7 +488,7 @@ public class Parser implements TokenListener
         
         else if (NUMBER == token && value.startsWith("0."))
         {
-            boolean yuiCanCollapse = sinceWhite == 1 || COLON == lastToken;
+            boolean yuiCanCollapse = COLON == lastToken || !YUI_NO_SPACE_AFTER.contains(lastToken);
             if ( options.shouldCollapseZeroes() || yuiCanCollapse )
             {
                 queue(value.substring(1));
@@ -553,17 +544,12 @@ public class Parser implements TokenListener
             // values of 0 don't need a unit
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
-                // YUI only strips units if zero was preceded by colon or whitespace.  However
-                // it also strips whitespace following !{}:;>+([, before running that rule.
-                // So we have to be compatible with the bug. :-(
-                boolean stripIt = COLON == lastLastToken || 
-                    (sinceWhite == 2 && !YUI_NO_SPACE_AFTER.contains(lastLastToken));
+                boolean stripIt = COLON == lastLastToken || !YUI_NO_SPACE_AFTER.contains(lastLastToken);
                 if (options.isDebug())
                 {
                     System.err.println("token= " + token + 
                                        " last=" + lastToken +
                                        " lastlast=" + lastLastToken +
-                                       " sinceWhite=" + sinceWhite +
                                        " stripIt=" + stripIt);
                 }
                 if (options.keepUnitsWithZero() && PERCENT == token && !stripIt)
