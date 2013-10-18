@@ -87,6 +87,7 @@ public class Parser implements TokenListener
     private Token  lastToken;
     private Token  lastLastToken;
     private String lastValue;
+    private boolean base64;
 
     private final PrintStream out;
 
@@ -358,6 +359,15 @@ public class Parser implements TokenListener
             space = false;
             return;
         }
+        
+        // base64,data...
+        if (IDENTIFIER == token && "base64".equals(value))
+        {
+            queue(value);
+            base64 = true;
+            space = false;
+            return;
+        }
 
         if (AT == token)
         {
@@ -415,6 +425,7 @@ public class Parser implements TokenListener
                 collapseValue();
                 valueBuffer.clear();
                 property = null;
+                base64 = false;
                 queue(value);
             }
         }
@@ -465,6 +476,7 @@ public class Parser implements TokenListener
                 buffer(value);
             }
             property = null;
+            base64 = false;
             inRule = false;
         }
         
@@ -553,13 +565,6 @@ public class Parser implements TokenListener
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
                 boolean stripIt = COLON == lastLastToken || !YUI_NO_SPACE_AFTER.contains(lastLastToken);
-                if (options.isDebug())
-                {
-                    System.err.println("token= " + token + 
-                                       " last=" + lastToken +
-                                       " lastlast=" + lastLastToken +
-                                       " stripIt=" + stripIt);
-                }
                 if (options.keepUnitsWithZero() && PERCENT == token && !stripIt)
                 {
                     queue("%");
@@ -611,7 +616,7 @@ public class Parser implements TokenListener
                         space(true, "need comment");
                     }
 
-                    if (property == null || KEYWORDS.contains(v))
+                    if ((property == null && !base64)|| KEYWORDS.contains(v))
                     {
                         queue(v);
                     }

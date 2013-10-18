@@ -81,6 +81,10 @@ public class JACSSTest
             options.yui242 = true;
             options.imply();
         }
+        if (source.contains("DEBUGME"))
+        {
+            options.debug = true;
+        }
         new JACSS( in, out, options ).run();
         Assert.assertEquals( out.toString(), expected, name );
     }
