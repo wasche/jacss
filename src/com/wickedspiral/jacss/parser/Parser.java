@@ -565,9 +565,9 @@ public class Parser implements TokenListener
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
                 boolean stripIt = COLON == lastLastToken || !YUI_NO_SPACE_AFTER.contains(lastLastToken);
-                if (options.keepUnitsWithZero() && PERCENT == token && !stripIt)
+                if (options.keepUnitsWithZero() && !stripIt)
                 {
-                    queue("%");
+                    queue(value);
                 }
                 else if (options.keepUnitsWithZero() && ("deg".equals(value) || "s".equals(value)))
                 {
