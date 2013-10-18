@@ -39,7 +39,7 @@ public class Parser implements TokenListener
         Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
     );
     private static final Collection<String> BOUNDARY_OPS         = new HashSet<>(
-        Arrays.asList( "{", "}", "(", ")", ">", ";", ":", "," )
+        Arrays.asList( "{", "}", "(", ")", ">", ";", ":", ",", "+" )
     ); // or comment
     private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<>(
         Arrays.asList( "background-position", "-webkit-transform-origin", "-moz-transform-origin" )
@@ -467,7 +467,7 @@ public class Parser implements TokenListener
                 }
                 pending = value;
             }
-            else if (options.addTrailingSemicolons()) // Fix #19
+            else if (options.addTrailingSemicolons() && inRule) // Fix #19
             {
                 buffer(";" + value);
             }
