@@ -208,6 +208,10 @@ public class Parser implements TokenListener
                 buffer("0");
             }
         }
+        else if (options.fixBackgroundPosition() && "0".equals(value) && "background-position".equals(property))
+        {
+            buffer("0 0");
+        }
         else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)) && options.shouldCollapseNone())
         {
             buffer("0");

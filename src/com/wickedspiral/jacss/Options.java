@@ -46,6 +46,9 @@ public class Options
     // Yet another, fix #33
     protected boolean compressMicrosoft = true;
     
+    // Fix #36
+    protected boolean fixBackgroundPosition = false;
+    
     @Option( name = "--compat-yui242", required = false, usage = "Match compatibility with YUI 2.4.2" )
     protected boolean yui242 = false;
 
@@ -62,6 +65,7 @@ public class Options
             keepUnitsWithZero = true;
             cleanXmlStrings = true;
             compressMicrosoft = false;
+            fixBackgroundPosition = true;
         }
     }
     
@@ -113,5 +117,10 @@ public class Options
     public boolean keepUnitsWithZero()
     {
         return keepUnitsWithZero;
+    }
+    
+    public boolean fixBackgroundPosition()
+    {
+        return fixBackgroundPosition;
     }
 }
