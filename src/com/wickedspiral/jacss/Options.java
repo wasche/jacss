@@ -41,7 +41,7 @@ public class Options
     protected boolean noLowercasifyKeywords = false;
     
     // Another private YUI option, fix #32
-    protected boolean cleanXmlStrings = false;
+    protected boolean cleanStrings = false;
     
     // Yet another, fix #33
     protected boolean compressMicrosoft = true;
@@ -63,7 +63,7 @@ public class Options
             noLowercasifyRgb = true;
             noLowercasifyKeywords = true;
             keepUnitsWithZero = true;
-            cleanXmlStrings = true;
+            cleanStrings = true;
             compressMicrosoft = false;
             fixBackgroundPosition = true;
         }
@@ -99,9 +99,9 @@ public class Options
         return !noLowercasifyKeywords;
     }
 
-    public boolean shouldCleanXmlStrings()
+    public boolean shouldCleanStrings()
     {
-        return cleanXmlStrings;
+        return cleanStrings;
     }
 
     public boolean keepTailingSemicolons()

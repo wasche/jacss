@@ -550,14 +550,18 @@ public class Parser implements TokenListener
             {
                 queue(value.replaceAll(", +", ","));
             }
+            else if (options.shouldCleanStrings())
+            {
+                queue(cleanString(value));
+            }
             else
             {
                 queue(value);
             }
         }
-        else if (STRING == token && options.shouldCleanXmlStrings() && value.contains("svg+xml"))
-        {
-            queue(cleanXml(value));
+        else if (STRING == token && options.shouldCleanStrings() && value.contains("svg+xml"))
+        { 
+            queue(cleanSvgString(value));
         }
         else if (EQUALS == token)
         {
@@ -684,7 +688,7 @@ public class Parser implements TokenListener
         lastValue = value;
     }
     
-    // Fix #32 -- YUI indiscriminately compresses some SVG content.
+    // Fix #32 -- YUI indiscriminately compresses some string content.
     
     private final static Pattern multipleSpaces = Pattern.compile("\\s\\s\\s*");
     private final static Pattern trailingSpace = Pattern.compile("([>,])\\s+");
@@ -692,11 +696,16 @@ public class Parser implements TokenListener
     private final static Pattern hexString =
         Pattern.compile("([^\"'=\\s])(\\s*)#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])");
 
-    
-    private String cleanXml(String s)
+    private String cleanString(String s)
     {
         s = multipleSpaces.matcher(s).replaceAll(" ");
         s = trailingSpace.matcher(s).replaceAll("$1");
+        return s;
+    }
+    
+    private String cleanSvgString(String s)
+    {
+        s = cleanString(s);
         s = leadingZero.matcher(s).replaceAll("$1.");
         
         Matcher m = hexString.matcher(s);
