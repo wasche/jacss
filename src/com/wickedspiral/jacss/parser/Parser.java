@@ -80,6 +80,7 @@ public class Parser implements TokenListener
     private boolean at;
     private boolean ie5mac;
     private boolean rgb;
+    private int     msFunction;
     private int     checkSpace;
     
     // other state
@@ -367,6 +368,20 @@ public class Parser implements TokenListener
             space = false;
             return;
         }
+        
+        // recognize scope of e.g. DXImageTransform.Microsoft.Anything(...)
+        if (token == IDENTIFIER && "microsoft".equalsIgnoreCase(value))
+        {
+            msFunction = 1;
+        }
+        else if (token == LPAREN && msFunction == 1)
+        {
+            msFunction = 2;
+        }
+        else if (token == RPAREN)
+        {
+            msFunction = 0;
+        }
 
         if (AT == token)
         {
@@ -507,7 +522,8 @@ public class Parser implements TokenListener
         
         else if (NUMBER == token && value.startsWith("0."))
         {
-            boolean yuiCanCollapse = COLON == lastToken || !YUI_NO_SPACE_AFTER.contains(lastToken);
+            boolean yuiCanCollapse = msFunction != 2 &&
+                (COLON == lastToken || !YUI_NO_SPACE_AFTER.contains(lastToken));
             if ( options.shouldCollapseZeroes() || yuiCanCollapse )
             {
                 queue(value.substring(1));
