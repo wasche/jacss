@@ -498,6 +498,10 @@ public class Parser implements TokenListener
         {
             if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains( lastValue ))
             {
+                if (lastToken == RPAREN && value.startsWith("."))
+                {
+                    space(true, "after parameterized selector"); // Fix #39
+                }
                 queue(value);
             }
             else
