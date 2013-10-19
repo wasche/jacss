@@ -75,7 +75,17 @@ public class JACSSTest
     {
         ByteArrayInputStream in = new ByteArrayInputStream( source.getBytes( UTF8 ) );
         ByteArrayOutputStream out = new ByteArrayOutputStream();
-        new JACSS( in, out, new Options() ).run();
+        Options options = new Options();
+        if (name.startsWith("yui-"))
+        {
+            options.yui242 = true;
+            options.imply();
+        }
+        if (source.contains("DEBUGME"))
+        {
+            options.debug = true;
+        }
+        new JACSS( in, out, options ).run();
         Assert.assertEquals( out.toString(), expected, name );
     }
 }

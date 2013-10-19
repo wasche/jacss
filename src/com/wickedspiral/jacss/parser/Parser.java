@@ -1,3 +1,10 @@
+/*
+ * Portions of this code (specifically, regex-based hex constant compression) are
+ * Copyright (c) 2007, Yahoo! Inc. All rights reserved.
+ * Code licensed under the BSD License:
+ *     http://developer.yahoo.net/yui/license.txt
+ */
+
 package com.wickedspiral.jacss.parser;
 
 import com.google.common.base.Joiner;
@@ -10,6 +17,8 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static com.wickedspiral.jacss.lexer.Token.*;
 
@@ -24,18 +33,26 @@ public class Parser implements TokenListener
     private static final String             MS_ALPHA             = "progid:dximagetransform.microsoft.alpha(opacity=";
     private static final String             MS_SHADOW            = "progid:dximagetransform.microsoft.shadow";
     private static final Collection<String> UNITS                = new HashSet<>(
-        Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "%" )
+        Arrays.asList( "px", "em", "pt", "in", "cm", "mm", "pc", "ex", "deg", "s", "%" )
     );
     private final Collection<String> KEYWORDS             = new HashSet<>(
         Arrays.asList( "normal", "bold", "italic", "serif", "sans-serif", "fixed" )
     );
     private static final Collection<String> BOUNDARY_OPS         = new HashSet<>(
-        Arrays.asList( "{", "}", "(", ")", ">", ";", ":", "," )
+        Arrays.asList( "{", "}", "(", ")", ">", ";", ":", ",", "+" )
     ); // or comment
     private static final Collection<String> DUAL_ZERO_PROPERTIES = new HashSet<>(
         Arrays.asList( "background-position", "-webkit-transform-origin", "-moz-transform-origin" )
     );
     private static final Collection<String> NONE_PROPERTIES      = new HashSet<>();
+    
+    // YUI only strips units or leading zero if the zero was preceded by colon or whitespace.
+    // However it also strips whitespace following certain chars before doing that, causing
+    // the zero logic to break everywhere.  This list lets us be compatible with that bug. :-(
+    
+    private static final Collection<Token> YUI_NO_SPACE_AFTER = new HashSet<>(
+        Arrays.asList(COMMA, LBRACE, RBRACE, COLON, SEMICOLON, LPAREN)
+    );
 
     static
     {
@@ -63,14 +80,15 @@ public class Parser implements TokenListener
     private boolean at;
     private boolean ie5mac;
     private boolean rgb;
-    private boolean rgba;
-    private boolean colorStop;
+    private int     msFunction;
     private int     checkSpace;
-
+    
     // other state
     private String property;
     private Token  lastToken;
+    private Token  lastLastToken;
     private String lastValue;
+    private boolean base64;
 
     private final PrintStream out;
 
@@ -135,7 +153,7 @@ public class Parser implements TokenListener
         }
         ruleBuffer.add( str );
 
-        if ( "}".equals( str ) )
+        if ( "}".equals( str ) || ";}".equals( str ) )
         {
             // check for empty rule
             if ( ruleBuffer.size() < 2 || (ruleBuffer.size() >= 2 && !"{".equals( ruleBuffer.get( ruleBuffer.size() - 2 ) )) )
@@ -191,6 +209,10 @@ public class Parser implements TokenListener
                 buffer("0");
             }
         }
+        else if (options.fixBackgroundPosition() && "0".equals(value) && "background-position".equals(property))
+        {
+            buffer("0 0");
+        }
         else if ("none".equals(value) && (NONE_PROPERTIES.contains(property) || "background".equals(property)) && options.shouldCollapseNone())
         {
             buffer("0");
@@ -219,7 +241,7 @@ public class Parser implements TokenListener
     public void token(Token token, String value)
     {
         if (options.isDebug()) System.err.printf("Token: %s, value: %s, space? %b, in rule? %b\n", token, value, space, inRule);
-
+        
         if (rgb)
         {
             if (NUMBER == token)
@@ -263,7 +285,10 @@ public class Parser implements TokenListener
                     queue(s);
                 }
                 rgb = false;
+                token = NUMBER; // Fix #38
             }
+            
+            saveLast(token, value);
             return;
         }
 
@@ -280,15 +305,13 @@ public class Parser implements TokenListener
             if ('!' == value.charAt(2))
             {
                 queue(value);
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
             }
             // 2) IE5/Mac hack
             else if ('\\' == value.charAt(value.length()-3))
             {
                 queue("/*\\*/");
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
                 ie5mac = true;
             }
             else if (ie5mac)
@@ -300,16 +323,14 @@ public class Parser implements TokenListener
                 {
                     queue("/**/");
                 }
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
                 ie5mac = false;
             }
             // 3) After a child selector
             else if (GT == lastToken)
             {
                 queue("/**/");
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
             }
             return;
         }
@@ -338,24 +359,28 @@ public class Parser implements TokenListener
             space = false;
             return;
         }
-
-        if (IDENTIFIER == token && "rgba".equals(value))
+        
+        // base64,data...
+        if (IDENTIFIER == token && "base64".equals(value))
         {
-            rgba = true;
-        }
-        else if (RPAREN == token && rgba)
-        {
-            rgba = false;
+            queue(value);
+            base64 = true;
+            space = false;
+            return;
         }
         
-        // Fix #24, YUI color-stop() weirdness
-        if (LPAREN == token && "color-stop".equals(lastValue))
+        // recognize scope of e.g. DXImageTransform.Microsoft.Anything(...)
+        if (token == IDENTIFIER && "microsoft".equalsIgnoreCase(value))
         {
-            colorStop = true;
+            msFunction = 1;
         }
-        else if (RPAREN == token && colorStop)
+        else if (token == LPAREN && msFunction == 1)
         {
-            colorStop = false;
+            msFunction = 2;
+        }
+        else if (token == RPAREN)
+        {
+            msFunction = 0;
         }
 
         if (AT == token)
@@ -379,9 +404,16 @@ public class Parser implements TokenListener
         {
             if (at)
             {
+                // means at-directive with no rule body
+                // (because seeing LBRACE sets at=false)
+                
                 at = false;
                 if ("charset".equals(ruleBuffer.get(1)))
                 {
+                    // e.g.
+                    // @charset "utf-8";
+                    // can only appear once
+                    
                     if (charset)
                     {
                         ruleBuffer.clear();
@@ -407,6 +439,7 @@ public class Parser implements TokenListener
                 collapseValue();
                 valueBuffer.clear();
                 property = null;
+                base64 = false;
                 queue(value);
             }
         }
@@ -448,7 +481,7 @@ public class Parser implements TokenListener
                 }
                 pending = value;
             }
-            else if (options.addTrailingSemicolons()) // Fix #19
+            else if (options.addTrailingSemicolons() && inRule) // Fix #19
             {
                 buffer(";" + value);
             }
@@ -457,12 +490,18 @@ public class Parser implements TokenListener
                 buffer(value);
             }
             property = null;
+            base64 = false;
             inRule = false;
         }
+        
         else if (!inRule)
         {
             if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains( lastValue ))
             {
+                if (lastToken == RPAREN && value.startsWith("."))
+                {
+                    space(true, "after parameterized selector"); // Fix #39
+                }
                 queue(value);
             }
             else
@@ -480,9 +519,16 @@ public class Parser implements TokenListener
                 space = false;
             }
         }
+        
+        // at this point we're in a rule body and looking at something that continues
+        // the current property value (the property name is set several steps above,
+        // when we see the COLON after it)
+        
         else if (NUMBER == token && value.startsWith("0."))
         {
-            if ( options.shouldCollapseZeroes() || !rgba )
+            boolean yuiCanCollapse = msFunction != 2 &&
+                (COLON == lastToken || !YUI_NO_SPACE_AFTER.contains(lastToken));
+            if ( options.shouldCollapseZeroes() || yuiCanCollapse )
             {
                 queue(value.substring(1));
             }
@@ -494,7 +540,7 @@ public class Parser implements TokenListener
         else if (STRING == token && "-ms-filter".equals(property))
         {
             String v = value.toLowerCase();
-            if (v.startsWith(MS_ALPHA, 1))
+            if (options.shouldCompressMicrosoft() && v.startsWith(MS_ALPHA, 1))
             {
                 String c = value.substring(0, 1);
                 String o = value.substring(MS_ALPHA.length()+1, value.length()-2);
@@ -504,14 +550,22 @@ public class Parser implements TokenListener
                 queue(")");
                 queue(c);
             }
-            else if (v.startsWith(MS_SHADOW, 1))
+            else if (options.shouldCompressMicrosoft() && v.startsWith(MS_SHADOW, 1))
             {
                 queue(value.replaceAll(", +", ","));
+            }
+            else if (options.shouldCleanStrings())
+            {
+                queue(cleanString(value));
             }
             else
             {
                 queue(value);
             }
+        }
+        else if (STRING == token && options.shouldCleanStrings() && value.contains("svg+xml"))
+        { 
+            queue(cleanSvgString(value));
         }
         else if (EQUALS == token)
         {
@@ -521,7 +575,7 @@ public class Parser implements TokenListener
             {
                 sb.append(s);
             }
-            if (MS_ALPHA.equals(sb.toString().toLowerCase()))
+            if (options.shouldCompressMicrosoft() && MS_ALPHA.equals(sb.toString().toLowerCase()))
             {
                 buffer("alpha(opacity=");
                 valueBuffer.clear();
@@ -533,9 +587,14 @@ public class Parser implements TokenListener
             // values of 0 don't need a unit
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
-                if (PERCENT == token && colorStop && options.keepUnitsInColorStop())
+                boolean stripIt = COLON == lastLastToken || !YUI_NO_SPACE_AFTER.contains(lastLastToken);
+                if (options.keepUnitsWithZero() && !stripIt)
                 {
-                    queue("%");
+                    queue(value);
+                }
+                else if (options.keepUnitsWithZero() && ("deg".equals(value) || "s".equals(value)))
+                {
+                    queue(value);
                 }
                 else if (!UNITS.contains(value))
                 {
@@ -580,7 +639,7 @@ public class Parser implements TokenListener
                         space(true, "need comment");
                     }
 
-                    if (property == null || KEYWORDS.contains(v))
+                    if ((property == null && !base64)|| KEYWORDS.contains(v))
                     {
                         queue(v);
                     }
@@ -597,6 +656,10 @@ public class Parser implements TokenListener
                 {
                     space(true, "between token and non-boundary op");
                 }
+                else if (space && QUESTION == token)
+                {
+                    space(true, "before question mark");
+                }
 
                 if (KEYWORDS.contains(v))
                 {
@@ -609,8 +672,7 @@ public class Parser implements TokenListener
             }
         }
 
-        lastToken = token;
-        lastValue = value;
+        saveLast(token, value);
         space = false;
     }
 
@@ -621,5 +683,50 @@ public class Parser implements TokenListener
         {
             output(ruleBuffer);
         }
+    }
+    
+    private void saveLast(Token token, String value)
+    {
+        lastLastToken = lastToken;
+        lastToken = token;
+        lastValue = value;
+    }
+    
+    // Fix #32 -- YUI indiscriminately compresses some string content.
+    
+    private final static Pattern multipleSpaces = Pattern.compile("\\s\\s\\s*");
+    private final static Pattern trailingSpace = Pattern.compile("([>,])\\s+");
+    private final static Pattern leadingZero = Pattern.compile("([ :])0\\.");
+    private final static Pattern hexString =
+        Pattern.compile("([^\"'=\\s])(\\s*)#([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])([0-9a-fA-F])");
+
+    private String cleanString(String s)
+    {
+        s = multipleSpaces.matcher(s).replaceAll(" ");
+        s = trailingSpace.matcher(s).replaceAll("$1");
+        return s;
+    }
+    
+    private String cleanSvgString(String s)
+    {
+        s = cleanString(s);
+        s = leadingZero.matcher(s).replaceAll("$1.");
+        
+        Matcher m = hexString.matcher(s);
+        StringBuffer sb = new StringBuffer();
+        while (m.find()) {
+            // Test for AABBCC pattern
+            if (m.group(3).equalsIgnoreCase(m.group(4)) &&
+                    m.group(5).equalsIgnoreCase(m.group(6)) &&
+                    m.group(7).equalsIgnoreCase(m.group(8))) {
+                m.appendReplacement(sb, m.group(1) + m.group(2) + "#" + m.group(3) + m.group(5) + m.group(7));
+            } else {
+                m.appendReplacement(sb, m.group());
+            }
+        }
+        m.appendTail(sb);
+        s = sb.toString();
+        
+        return s;
     }
 }
