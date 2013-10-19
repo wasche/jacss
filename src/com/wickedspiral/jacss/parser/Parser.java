@@ -284,7 +284,10 @@ public class Parser implements TokenListener
                     queue(s);
                 }
                 rgb = false;
+                token = NUMBER; // Fix #38
             }
+            
+            saveLast(token, value);
             return;
         }
 
@@ -301,17 +304,13 @@ public class Parser implements TokenListener
             if ('!' == value.charAt(2))
             {
                 queue(value);
-                lastLastToken = lastToken;
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
             }
             // 2) IE5/Mac hack
             else if ('\\' == value.charAt(value.length()-3))
             {
                 queue("/*\\*/");
-                lastLastToken = lastToken;
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
                 ie5mac = true;
             }
             else if (ie5mac)
@@ -323,18 +322,14 @@ public class Parser implements TokenListener
                 {
                     queue("/**/");
                 }
-                lastLastToken = lastToken;
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
                 ie5mac = false;
             }
             // 3) After a child selector
             else if (GT == lastToken)
             {
                 queue("/**/");
-                lastLastToken = lastToken;
-                lastToken = token;
-                lastValue = value;
+                saveLast(token, value);
             }
             return;
         }
@@ -653,9 +648,7 @@ public class Parser implements TokenListener
             }
         }
 
-        lastLastToken = lastToken;
-        lastToken = token;
-        lastValue = value;
+        saveLast(token, value);
         space = false;
     }
 
@@ -666,6 +659,13 @@ public class Parser implements TokenListener
         {
             output(ruleBuffer);
         }
+    }
+    
+    private void saveLast(Token token, String value)
+    {
+        lastLastToken = lastToken;
+        lastToken = token;
+        lastValue = value;
     }
     
     // Fix #32 -- YUI indiscriminately compresses some SVG content.
