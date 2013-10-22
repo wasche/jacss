@@ -25,29 +25,11 @@ public class Options
         usage = "Add trailing semicolons on last style of a rule" )
     protected boolean addTrailingSemicolons = false;
 
-    @Option( name = "--no-collapse-zeroes", required = false, usage = "Do not drop leading zeroes where YUI doesn't" )
-    protected boolean noCollapseZeroes = false;
-
     @Option( name = "--no-collapse-none", required = false, usage = "Do not collapse none to 0" )
     protected boolean noCollapseNone = false;
     
     @Option( name = "--no-lowercasify-rgb", required = false, usage = "Do not lowercasify RGB hex constants" )
     protected boolean noLowercasifyRgb = false;
-    
-    // This is too silly to be a public option; fix #24.
-    protected boolean keepUnitsWithZero = false;
-    
-    // This is too silly to be a public option; fix #25.
-    protected boolean noLowercasifyKeywords = false;
-    
-    // Another private YUI option, fix #32
-    protected boolean cleanStrings = false;
-    
-    // Yet another, fix #33
-    protected boolean compressMicrosoft = true;
-    
-    // Fix #36
-    protected boolean fixBackgroundPosition = false;
     
     @Option( name = "--compat-yui242", required = false, usage = "Match compatibility with YUI 2.4.2" )
     protected boolean yui242 = false;
@@ -58,14 +40,8 @@ public class Options
         {
             keepTailingSemicolons = true;
             addTrailingSemicolons = true;
-            noCollapseZeroes = true;
             noCollapseNone = true;
             noLowercasifyRgb = true;
-            noLowercasifyKeywords = true;
-            keepUnitsWithZero = true;
-            cleanStrings = true;
-            compressMicrosoft = false;
-            fixBackgroundPosition = true;
         }
     }
     
@@ -74,34 +50,19 @@ public class Options
         return debug;
     }
 
+    public boolean isYui242()
+    {
+        return yui242;
+    }
+   
     public boolean shouldCollapseNone()
     {
         return !noCollapseNone;
     }
     
-    public boolean shouldCollapseZeroes()
-    {
-        return !noCollapseZeroes;
-    }
-    
     public boolean shouldLowercasifyRgb()
     {
         return !noLowercasifyRgb;
-    }
-
-    public boolean shouldCompressMicrosoft()
-    {
-        return compressMicrosoft;
-    }
-
-    public boolean shouldLowercasifyKeywords()
-    {
-        return !noLowercasifyKeywords;
-    }
-
-    public boolean shouldCleanStrings()
-    {
-        return cleanStrings;
     }
 
     public boolean keepTailingSemicolons()
@@ -112,15 +73,5 @@ public class Options
     public boolean addTrailingSemicolons()
     {
         return addTrailingSemicolons;
-    }
-    
-    public boolean keepUnitsWithZero()
-    {
-        return keepUnitsWithZero;
-    }
-    
-    public boolean fixBackgroundPosition()
-    {
-        return fixBackgroundPosition;
     }
 }
