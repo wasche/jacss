@@ -112,7 +112,7 @@ public class Parser implements TokenListener
 
         this.options = options;
         
-        if (! options.shouldLowercasifyKeywords())
+        if (options.isYui242())
         {
             KEYWORDS.remove("sans-serif"); // Fix #25
         }
@@ -209,7 +209,7 @@ public class Parser implements TokenListener
                 buffer("0");
             }
         }
-        else if (options.fixBackgroundPosition() && "0".equals(value) && "background-position".equals(property))
+        else if (options.isYui242() && "0".equals(value) && "background-position".equals(property))
         {
             buffer("0 0");
         }
@@ -528,7 +528,7 @@ public class Parser implements TokenListener
         {
             boolean yuiCanCollapse = msFunction != 2 &&
                 (COLON == lastToken || !YUI_NO_SPACE_AFTER.contains(lastToken));
-            if ( options.shouldCollapseZeroes() || yuiCanCollapse )
+            if ( !options.isYui242() || yuiCanCollapse )
             {
                 queue(value.substring(1));
             }
@@ -540,7 +540,7 @@ public class Parser implements TokenListener
         else if (STRING == token && "-ms-filter".equals(property))
         {
             String v = value.toLowerCase();
-            if (options.shouldCompressMicrosoft() && v.startsWith(MS_ALPHA, 1))
+            if (!options.isYui242() && v.startsWith(MS_ALPHA, 1))
             {
                 String c = value.substring(0, 1);
                 String o = value.substring(MS_ALPHA.length()+1, value.length()-2);
@@ -550,11 +550,11 @@ public class Parser implements TokenListener
                 queue(")");
                 queue(c);
             }
-            else if (options.shouldCompressMicrosoft() && v.startsWith(MS_SHADOW, 1))
+            else if (!options.isYui242() && v.startsWith(MS_SHADOW, 1))
             {
                 queue(value.replaceAll(", +", ","));
             }
-            else if (options.shouldCleanStrings())
+            else if (options.isYui242())
             {
                 queue(cleanString(value));
             }
@@ -563,7 +563,7 @@ public class Parser implements TokenListener
                 queue(value);
             }
         }
-        else if (STRING == token && options.shouldCleanStrings() && value.contains("svg+xml"))
+        else if (STRING == token && options.isYui242() && value.contains("svg+xml"))
         { 
             queue(cleanSvgString(value));
         }
@@ -575,7 +575,7 @@ public class Parser implements TokenListener
             {
                 sb.append(s);
             }
-            if (options.shouldCompressMicrosoft() && MS_ALPHA.equals(sb.toString().toLowerCase()))
+            if (!options.isYui242() && MS_ALPHA.equals(sb.toString().toLowerCase()))
             {
                 buffer("alpha(opacity=");
                 valueBuffer.clear();
@@ -588,11 +588,11 @@ public class Parser implements TokenListener
             if (NUMBER == lastToken && "0".equals(lastValue) && (PERCENT == token || IDENTIFIER == token))
             {
                 boolean stripIt = COLON == lastLastToken || !YUI_NO_SPACE_AFTER.contains(lastLastToken);
-                if (options.keepUnitsWithZero() && !stripIt)
+                if (options.isYui242() && !stripIt)
                 {
                     queue(value);
                 }
-                else if (options.keepUnitsWithZero() && ("deg".equals(value) || "s".equals(value)))
+                else if (options.isYui242() && ("deg".equals(value) || "s".equals(value)))
                 {
                     queue(value);
                 }
