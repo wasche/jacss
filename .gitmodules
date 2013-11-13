@@ -1,3 +1,3 @@
 [submodule "tests"]
 	path = tests
-	url = git://github.com/kurakin/css-test
+	url = git://github.com/wasche/css-test

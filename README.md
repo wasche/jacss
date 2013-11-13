@@ -1,9 +1,9 @@
-# jacss [![Build Status](https://travis-ci.org/kurakin/jacss.png)](https://travis-ci.org/kurakin/jacss) [![Still Maintained](http://stillmaintained.com/kurakin/jacss.png)](http://stillmaintained.com/kurakin/jacss)
+# jacss [![Build Status](https://travis-ci.org/wasche/jacss.png)](https://travis-ci.org/wasche/jacss) [![Still Maintained](http://stillmaintained.com/wasche/jacss.png)](http://stillmaintained.com/wasche/jacss)
 
 Java port of [ncss]. It is a streaming compressor for CSS, but unlike other CSS
 minifiers it works on a stream and is optimized for speed.
 
-[ncss]: http://github.com/kurakin/ncss
+[ncss]: http://github.com/wasche/ncss
 
 # Usage
 
