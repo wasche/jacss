@@ -115,6 +115,7 @@ public class Parser implements TokenListener
         if (options.isYui242())
         {
             KEYWORDS.remove("sans-serif"); // Fix #25
+            KEYWORDS.remove("bold"); // Fix #47
         }
     }
 
@@ -498,9 +499,9 @@ public class Parser implements TokenListener
         {
             if (!space || GT == token || lastToken == null || BOUNDARY_OPS.contains( lastValue ))
             {
-                if (lastToken == RPAREN && value.startsWith("."))
+                if (space && lastToken == RPAREN && value.startsWith("."))
                 {
-                    space(true, "after parameterized selector"); // Fix #39
+                    space(true, "after parameterized selector"); // Fix #39 / #48
                 }
                 queue(value);
             }
