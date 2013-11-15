@@ -16,6 +16,7 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.nio.file.Files;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -79,25 +80,27 @@ public class JACSS implements Runnable
     private final String targetName;
     private final InputStream source;
     private final OutputStream target;
+    private final File targetFile;
     private final Options options;
     private final boolean shouldCompress;
 
-    public JACSS( File file, File from, Options options ) throws FileNotFoundException
+    public JACSS( File in, File out, Options options ) throws FileNotFoundException
     {
         this.options = options;
 
-        if ( !file.isFile() )
+        if ( !in.isFile() )
         {
-            throw new FileNotFoundException(file.toString());
+            throw new FileNotFoundException(in.toString());
         }
 
-        sourceName = file.getName();
-        targetName = from.getName();
+        sourceName = in.getName();
+        targetName = out.getName();
+        targetFile = out;
 
-        shouldCompress = options.force || !(from.exists() && from.lastModified() >= file.lastModified());
+        shouldCompress = options.force || !(out.exists() && out.lastModified() >= in.lastModified());
 
-        source = shouldCompress ? new FileInputStream( file ) : null;
-        target = shouldCompress ? new FileOutputStream( from ) : null;
+        source = shouldCompress ? new FileInputStream( in ) : null;
+        target = shouldCompress ? new FileOutputStream( out ) : null;
     }
     
     public JACSS( File source, OutputStream target, Options options ) throws FileNotFoundException
@@ -111,6 +114,7 @@ public class JACSS implements Runnable
         
         sourceName = source.getName();
         targetName = "<out>";
+        targetFile = null;
         
         this.source = new FileInputStream( source );
         this.target = target;
@@ -124,6 +128,7 @@ public class JACSS implements Runnable
         this.source = source;
         this.target = target;
         this.options = options;
+        targetFile = null;
         shouldCompress = true;
     }
 
@@ -149,6 +154,10 @@ public class JACSS implements Runnable
                 numFailures.incrementAndGet();
                 System.err.println("Compression failed for " + sourceName);
                 e.printStackTrace( System.err );
+                if (targetFile != null && targetFile.exists())
+                {
+                    targetFile.delete();
+                }
             }
         }
         else
