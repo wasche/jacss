@@ -1,5 +1,6 @@
 package com.wickedspiral.jacss;
 
+import com.google.common.io.Closeables;
 import com.wickedspiral.jacss.lexer.Lexer;
 import com.wickedspiral.jacss.parser.Parser;
 import org.kohsuke.args4j.Argument;
@@ -16,7 +17,6 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
-import java.nio.file.Files;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,6 +83,7 @@ public class JACSS implements Runnable
     private final File targetFile;
     private final Options options;
     private final boolean shouldCompress;
+    private final boolean closeSource, closeTarget;
 
     public JACSS( File in, File out, Options options ) throws FileNotFoundException
     {
@@ -101,6 +102,9 @@ public class JACSS implements Runnable
 
         source = shouldCompress ? new FileInputStream( in ) : null;
         target = shouldCompress ? new FileOutputStream( out ) : null;
+        
+        closeSource = true;
+        closeTarget = true;
     }
     
     public JACSS( File source, OutputStream target, Options options ) throws FileNotFoundException
@@ -119,6 +123,9 @@ public class JACSS implements Runnable
         this.source = new FileInputStream( source );
         this.target = target;
         shouldCompress = true;
+        
+        closeSource = true;
+        closeTarget = false;
     }
 
     public JACSS( InputStream source, OutputStream target, Options options )
@@ -130,6 +137,8 @@ public class JACSS implements Runnable
         this.options = options;
         targetFile = null;
         shouldCompress = true;
+        closeSource = false;
+        closeTarget = false;
     }
 
     public void run()
@@ -163,6 +172,15 @@ public class JACSS implements Runnable
         else
         {
             if (options.verbose) System.err.println("Skipping " + targetName);
+        }
+        
+        if (closeSource && source != null)
+        {
+            Closeables.closeQuietly(source);
+        }
+        if (closeTarget && target != null)
+        {
+            Closeables.closeQuietly(target);
         }
     }
 
