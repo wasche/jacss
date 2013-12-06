@@ -78,12 +78,12 @@ public class JACSS implements Runnable
 
     private final String sourceName;
     private final String targetName;
-    private final InputStream source;
-    private final OutputStream target;
+    private InputStream source;
+    private OutputStream target;
+    private final File sourceFile;
     private final File targetFile;
     private final Options options;
     private final boolean shouldCompress;
-    private final boolean closeSource, closeTarget;
 
     public JACSS( File in, File out, Options options ) throws FileNotFoundException
     {
@@ -94,17 +94,12 @@ public class JACSS implements Runnable
             throw new FileNotFoundException(in.toString());
         }
 
+        sourceFile = in;
+        targetFile = out;
         sourceName = in.getName();
         targetName = out.getName();
-        targetFile = out;
 
         shouldCompress = options.force || !(out.exists() && out.lastModified() >= in.lastModified());
-
-        source = shouldCompress ? new FileInputStream( in ) : null;
-        target = shouldCompress ? new FileOutputStream( out ) : null;
-        
-        closeSource = true;
-        closeTarget = true;
     }
     
     public JACSS( File source, OutputStream target, Options options ) throws FileNotFoundException
@@ -116,29 +111,26 @@ public class JACSS implements Runnable
             throw new FileNotFoundException( source.toString() );
         }
         
+        sourceFile = source;
+        targetFile = null;
         sourceName = source.getName();
         targetName = "<out>";
-        targetFile = null;
         
-        this.source = new FileInputStream( source );
+        this.source = null;
         this.target = target;
         shouldCompress = true;
-        
-        closeSource = true;
-        closeTarget = false;
     }
 
     public JACSS( InputStream source, OutputStream target, Options options )
     {
+        sourceFile = null;
+        targetFile = null;
         this.sourceName = "<in>";
         this.targetName = "<out>";
         this.source = source;
         this.target = target;
         this.options = options;
-        targetFile = null;
         shouldCompress = true;
-        closeSource = false;
-        closeTarget = false;
     }
 
     public void run()
@@ -146,17 +138,26 @@ public class JACSS implements Runnable
         if ( shouldCompress )
         {
             if (options.verbose) System.err.println( "Compressing " + sourceName + " to " + targetName );
-
-            try(
-                    BufferedInputStream in = new BufferedInputStream( source );
-                    PrintStream out = new PrintStream( new BufferedOutputStream( target ) )
-            )
+            
+            try
             {
+                if (sourceFile != null)
+                {
+                    source = new FileInputStream(sourceFile);
+                }
+                if (targetFile != null)
+                {
+                    target = new FileOutputStream(targetFile);
+                }
+                
+                BufferedInputStream in = new BufferedInputStream( source );
+                PrintStream out = new PrintStream( new BufferedOutputStream( target ) );
+                
                 Parser parser = new Parser( out, options );
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
-                
                 lexer.parse( in );
+                out.flush();
             }
             catch (Exception e)
             {
@@ -174,11 +175,11 @@ public class JACSS implements Runnable
             if (options.verbose) System.err.println("Skipping " + targetName);
         }
         
-        if (closeSource && source != null)
+        if (sourceFile != null && source != null)
         {
             Closeables.closeQuietly(source);
         }
-        if (closeTarget && target != null)
+        if (targetFile != null && target != null)
         {
             Closeables.closeQuietly(target);
         }
