@@ -157,6 +157,8 @@ public class JACSS implements Runnable
                 Lexer lexer = new Lexer();
                 lexer.addTokenListener(parser);
                 lexer.parse( in );
+                // Do explicit flush here because BufferedOutputStream swallows the exception
+                // from flush() on close().
                 out.flush();
             }
             catch (Exception e)
