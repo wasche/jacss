@@ -85,7 +85,7 @@ public class JACSSTest
         {
             options.debug = true;
         }
-        new JACSS( in, out, options ).run();
+        new JACSS( in, out, options ).call();
         Assert.assertEquals( out.toString(), expected, name );
     }
 }

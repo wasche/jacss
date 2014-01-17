@@ -1,6 +1,7 @@
 package com.wickedspiral.jacss;
 
 import com.google.common.io.Closeables;
+import com.google.common.util.concurrent.Uninterruptibles;
 import com.wickedspiral.jacss.lexer.Lexer;
 import com.wickedspiral.jacss.parser.Parser;
 import org.kohsuke.args4j.Argument;
@@ -17,9 +18,13 @@ import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
@@ -28,7 +33,7 @@ import java.util.regex.Pattern;
  * @author wasche
  * @since 2011.08.05
  */
-public class JACSS implements Runnable
+public class JACSS implements Callable<Boolean>
 {
     private static final String VERSION = JACSS.class.getPackage().getImplementationVersion();
 
@@ -74,8 +79,6 @@ public class JACSS implements Runnable
     private static final int EXIT_STATUS_TIMEOUT = 3;
     private static final int EXIT_STATUS_COMPRESSION_FAILED = 4;
     
-    private static final AtomicInteger numFailures = new AtomicInteger();
-
     private final String sourceName;
     private final String targetName;
     private InputStream source;
@@ -133,8 +136,9 @@ public class JACSS implements Runnable
         shouldCompress = true;
     }
 
-    public void run()
+    public Boolean call()
     {
+        boolean ok = false;
         if ( shouldCompress )
         {
             if (options.verbose) System.err.println( "Compressing " + sourceName + " to " + targetName );
@@ -160,10 +164,10 @@ public class JACSS implements Runnable
                 // Do explicit flush here because BufferedOutputStream swallows the exception
                 // from flush() on close().
                 out.flush();
+                ok = true;
             }
             catch (Exception e)
             {
-                numFailures.incrementAndGet();
                 System.err.println("Compression failed for " + sourceName);
                 e.printStackTrace( System.err );
                 if (targetFile != null && targetFile.exists())
@@ -185,6 +189,8 @@ public class JACSS implements Runnable
         {
             Closeables.closeQuietly(target);
         }
+        
+        return ok;
     }
 
     public static void main(String[] args)
@@ -221,6 +227,7 @@ public class JACSS implements Runnable
         if (cli.debug) System.err.println("Debug mode enabled.");
 
         ExecutorService pool = Executors.newFixedThreadPool(cli.numThreads);
+        List<Future<Boolean>> futures = new ArrayList<>();
         JACSS jacss;
         
         if ( null == cli.files || cli.files.isEmpty() )
@@ -243,7 +250,7 @@ public class JACSS implements Runnable
                         File f = new File( from.matcher(file.toString()).replaceAll(cli.regexTo) );
                         jacss = new JACSS(file, f, cli);
                     }
-                    pool.submit( jacss );
+                    futures.add(pool.submit(jacss));
                 }
                 catch (FileNotFoundException e)
                 {
@@ -254,18 +261,29 @@ public class JACSS implements Runnable
             }
         }
 
-        pool.shutdown();
-
-        try
+        int numFailures = 0;
+        for (Future<Boolean> future: futures)
         {
-            pool.awaitTermination(2, TimeUnit.MINUTES);
+            try
+            {
+                if (! Uninterruptibles.getUninterruptibly(future))
+                {
+                    numFailures++;
+                }
+            }
+            catch (ExecutionException e)
+            {
+                numFailures++;
+            }
         }
-        catch (InterruptedException e)
+
+        int remaining = pool.shutdownNow().size();
+        if (remaining > 0)
         {
-            System.err.println("ERROR: Timed out waiting for threads to finish.");
-            System.exit(EXIT_STATUS_TIMEOUT);
+            System.err.println(remaining + "incomplete tasks found");
+            numFailures++;
         }
         
-        System.exit(numFailures.get() == 0 ? 0 : EXIT_STATUS_COMPRESSION_FAILED);
+        System.exit(numFailures == 0 ? 0 : EXIT_STATUS_COMPRESSION_FAILED);
     }
 }
