@@ -178,6 +178,7 @@ public class JACSS implements Callable<Boolean>
         else
         {
             if (options.verbose) System.err.println("Skipping " + targetName);
+            ok = true;
         }
         
         if (closeSource && source != null)
